@@ -1,6 +1,9 @@
 """
-Basic server simulating DASH for algorithm development.
-Very simple first implementation with little adjustment serving as a starting point.
+Basic server simulating media transmission similar to DASH.
+Some parameters are provided for adjusting the maximum bandwidth,
+the representations available for transmission, the size and length of media chunks,
+and the rime between requests.  Dveloped in conjunction with a client script.
+
 
 (C)2020 Gianluca Traversa, London, United Kingdom.
 
@@ -47,7 +50,7 @@ def threaded_client(connection,_address):
                 _currentClient['Max Bandwidth']= _bandwidth
                 _totalBandwidth = _totalBandwidth-_bandwidth
                 _flgFirst=0
-                print('Fitst connection for: ' +_address[0]+':'+str(_address[1]))
+                print('First connection for: ' +_address[0]+':'+str(_address[1]))
             if _totalBandwidth<0:
                 bandwidth_sharing()
                 _totalBandwidth = 0
@@ -139,13 +142,15 @@ def bandwidth_sharing():
     if not _totalBandwidthReq:
         _totalBandwidthReq = _initBandwith
     _scaleFactor = _initBandwith/_totalBandwidthReq
-    print(_scaleFactor)
     for client in _clients:
         client['Bandwidth']=client['Max Bandwidth']*min(_scaleFactor,1)
 
+def main():
+    while True:
+        _client, _address = ServerSocket.accept()
+        save_client(_address)
+        start_client(_client,_address)
+    ServerSocket.close()
 
-while True:
-    _client, _address = ServerSocket.accept()
-    save_client(_address)
-    start_client(_client,_address)
-ServerSocket.close()
+if __name__ == '__main__':
+    main()
