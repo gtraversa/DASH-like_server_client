@@ -39,7 +39,6 @@ def threaded_client(connection,_address):
     try:
         while True:
             _data = connection.recv(_frameSize)                                     #Initial conditions set by the client 
-                                                                                    #fix issue with crashing when client disconnects
             if not _data:
                 break
             _bandwidth,_req,_timer,_qualiReq,_segNum,_currentClient = data_parse(_data,_address)            #Return of initial conditions to pass to bandwidth limiter simulation
@@ -58,8 +57,6 @@ def threaded_client(connection,_address):
                 send_chunk(connection,_bandwidth=_currentClient['Bandwidth'],_bytesSent=_chunkSize,_timer=_timer,_chunkLength=_chunkLength)
                 print('_________________________')
                 print("Message sent to: "+ _address[0]+':'+str(_address[1]))
-                print('Allocated bandwidth: '+ str(_currentClient['Bandwidth']))
-                print('_________________________')
             elif not _req:                                                          #Client buffer is full, send 0 length segment to ACK conneciton
                 send_chunk(connection,_bandwidth=_currentClient['Bandwidth'],_bytesSent=0,_timer=_timer,_chunkLength=0)
         conncection_closed(_currentClient)
@@ -112,7 +109,7 @@ def start_client(_client,_address):
     """Start new thread for new connection"""
     start_new_thread(threaded_client, (_client, _address))
     
-def conncection_closed(_currentClient): #add when client disconnects bandwidths should not excede max original
+def conncection_closed(_currentClient):
     """Eliminte client from list of clients when the connection is closed"""
     global _totalBandwidth
     print('Connection closed with: ' +_currentClient['IP']+':'+str(_currentClient['Port']))
@@ -131,7 +128,7 @@ def chunk_quality(_qualiReq,_segNum):
     _chosenQuali = _reprs[str(_qualiReq)]
     return _chosenQuali[random.randint(0,3)]
 
-def bandwidth_sharing():
+def bandwidth_sharing(): 
     """Allocate bandwidth to clients proportionally"""
     global _initBandwith
     _totalBandwidthReq = 0
@@ -144,13 +141,11 @@ def bandwidth_sharing():
     _scaleFactor = _initBandwith/_totalBandwidthReq
     print(_scaleFactor)
     for client in _clients:
-        client['Bandwidth']=client['Max Bandwidth']*_scaleFactor
+        client['Bandwidth']=client['Max Bandwidth']*min(_scaleFactor,1)
 
 
 while True:
     _client, _address = ServerSocket.accept()
     save_client(_address)
     start_client(_client,_address)
-    print(_clients) 
 ServerSocket.close()
-#pisellino
