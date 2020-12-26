@@ -68,6 +68,7 @@ while True:
     if _response.decode('utf-8')=='End':                                #End of media stream condition
         break
     _prevBuf,_tLast,_req,_chunkSize = save_data_point(_response.decode('utf-8'),_prevBuf,_tLast,_bufferData)
+    print('_________________________')
     print('Response = '+_response.decode('utf-8'))                      #Print response from server for debugging
     print('PrevBuf= '+ str(_prevBuf))
     print('ChunkSize= '+ str(_chunkSize))
