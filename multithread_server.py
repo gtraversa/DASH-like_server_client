@@ -36,8 +36,8 @@ def threaded_client(connection,_address):
     _flgFirst = 1
     _maxClientBandwidth = 0
     global _totalBandwidth
-    while True:
-        try:
+    try:
+        while True:
             _data = connection.recv(_frameSize)                                     #Initial conditions set by the client 
                                                                                     #fix issue with crashing when client disconnects
             if not _data:
@@ -62,12 +62,12 @@ def threaded_client(connection,_address):
                 print('_________________________')
             elif not _req:                                                          #Client buffer is full, send 0 length segment to ACK conneciton
                 send_chunk(connection,_bandwidth=_currentClient['Bandwidth'],_bytesSent=0,_timer=_timer,_chunkLength=0)
-        except error as e:
-            print(str(e))
-            break
-    conncection_closed(_currentClient)
-    connection.close()
-    
+        conncection_closed(_currentClient)
+        connection.close()
+    except socket.error as e:
+        conncection_closed(_currentClient)
+        connection.close()
+        print(str(e))
 
 def data_parse(_data,_address):
     """Parse client setup data, updates client and returns setup variables"""
@@ -153,5 +153,3 @@ while True:
     start_client(_client,_address)
     print(_clients) 
 ServerSocket.close()
-#pepeopo
-print('dick123')
