@@ -1,6 +1,8 @@
 """
 Basic local client simulating DASH for algorithm development.
-Very simple first implementation with little adjustment serving as a starting point.
+Designed together with a server program, includes some parameter adjustment
+using command line arguments for fast testing using multiple dicerse clients.
+Data logging is specific to the parameters of the client.
 
 (C)2020 Gianluca Traversa, London, United Kingdom.
 
@@ -19,45 +21,44 @@ _prevBuf=0
 _tLast=0
 _frameSize = 1024
 _start = time.time()                                                            
-_timer = 1                                                              #Minimum time in seconds between each request
-_maxBuf = 15                                                            #Maximum desired buffer in seconds (to avoid  unnecessary server load)
-_segNum=1
 
-
-def save_data_point(_response,_prevBuf,_tLast,_log):
+def save_data_point(_response,_prevBuf,_tLast,_log,_segNum,_maxBuf):
     """Function to process buffer health and log it to a file for analysis"""
     _flgFinishDownload = 0
     _now = time.time()
     _chunkInfo= str(_response).split(',')
     _point = _chunkInfo[0]
-    if str(_point) == '0':
-        print('Media finished.')
-        _flgFinish = 1
     _chunkSize=_chunkInfo[1]
+    if int(_chunkSize) == -1:                                           #End contition included in the media files
+        print('Media finished.')
+        _flgFinishDownload = 1
+        _req = 0
     _tDiff = _now-_start-_tLast                                         #Time decrease as media plays
     _t,_buf = _now-_start,(float(_point)+_prevBuf-_tDiff)               #Time and buffer health new data points
+
     if _buf > 0:
-        _log.write(str(_t)+','+str(_buf)+'\n')                          #Heathy bffer
+        _log.write(str(_t)+','+str(_buf)+','+str(_chunkSize)+'\n')                          #Heathy bffer
     else:                                                               #Buffer event for negative buffer health
         _buf = 0
-        _log.write(str(_t)+','+str(_buf)+'\n') 
+        _log.write(str(_t)+','+str(_buf)+','+str(_chunkSize)+'\n')
     if _buf > _maxBuf:                                                  #Stop requesing media when buffer is saturated
         _req = 0
-    else:
+    elif int(_chunkSize) != -1:
         _req=1 
-    return _buf,_t,_req,_chunkSize,_flgFinishDownload
+    return _buf,_t,_req,_chunkSize,_flgFinishDownload,_segNum
 
 
-def create_setup(_bandwidth,_timer,_req):
+def create_setup(_bandwidth,_timer,_req,_segNum):
     """Takes command line arguments for initial setup of client"""
     _qualiReq = quali_select()
-    _segNum = 1 #implement segment tracking
+    if _req:
+        _segNum=track_media(_segNum)
     _setup = str(_bandwidth)+','+ str(_req)+','+str(_timer) +','+str(_qualiReq)+','+str(_segNum)
-    return _setup,_qualiReq
+    return _setup,_qualiReq,_segNum
 
 def initial_setup(opts):
-    """Parse initial setup arguments """
-    _bandwidth,_timer,_req,_maxBuf = 100,1,1,10
+    """Parse initial setup arguments from command line"""
+    _bandwidth,_timer,_req,_maxBuf = 100,1,1,10                         #Default settings
     for o, a in opts:
         if o in ('-h','--help'):
            print("You're on your own")
@@ -75,15 +76,16 @@ def initial_setup(opts):
             _req = 0
         elif o in ('-m','--maxbuffer'):
             _maxBuf = int(a)
-    connect()
-    _bufferData=create_log(_bandwidth,_timer,_maxBuf)
-    return _bandwidth,_timer,_req,_bufferData
+    connect()                                                           #Create connection to server if parameters initialized properly
+    _bufferData=create_log(_bandwidth,_timer,_maxBuf)                   #Create logging file
+    return _bandwidth,_timer,_req,_bufferData,_maxBuf
 
 def create_log(_bandwidth,_timer,_maxBuf):
     """Creates .txt file for logging buffer health with parameters in the name"""
     _logName = str(_bandwidth)+'_'+str(_timer)+'_'+str(_maxBuf)+'_buffer.txt'
     _bufferData = open(_logName,'w+')                                   #Logging file created for buffer health
     _bufferData.truncate(0)
+    _bufferData.write('0,0,0\n')
     return _bufferData
 
 def quali_select():
@@ -104,7 +106,7 @@ def send_request(_clientSocket, _setup):
     _clientSocket.send(str.encode(_setup))
     
 
-def debug_prints(_response,_qualiReq):
+def debug_prints(_response,_qualiReq,_segNum):
     """Print received data for debugging purposes"""
     _chunkInfo= str(_response.decode('utf-8')).split(',')
     _length = str(_chunkInfo[0])
@@ -115,29 +117,32 @@ def debug_prints(_response,_qualiReq):
     print('Chunk size= '+_size)
     print('Chunk quality= '+_repr)                   
     print('PrevBuf= '+ str(_prevBuf))
+    print('Segment Number= '+ str(_segNum))
 
-def track_media():
+def track_media(_segNum):
     """Tracks the current media being streamed and requests the next available chunk"""
-    pass
+    _segNum+=1
+    return _segNum
 
 def main(argv):
     global _prevBuf,_tLast
     _flgFinishDownload = 0
+    _segNum=0
     try:
         opts, args = getopt.getopt(argv,"hb:t:rm:",["help","bandwidth=","timer=","request","max_buffer="])
     except getopt.GetoptError:
         print('Wrong inputs retardo')
         sys.exit(2)
-    _bandwidth,_timer,_req,_bufferData = initial_setup(opts)
+    _bandwidth,_timer,_req,_bufferData,_maxBuf = initial_setup(opts)
     while True:
-        _setup,_qualiReq = create_setup(_bandwidth,_timer,_req)                       #Pass setup to server
+        _setup,_qualiReq,_segNum = create_setup(_bandwidth,_timer,_req,_segNum)                         #Create setup to send to server
         send_request(_clientSocket,_setup)
         _response = _clientSocket.recv(_frameSize)
-        if _flgFinishDownload:                                #End of media stream condition (not implemented yet on server side)
-            _prevBuf,_tLast,_req,_chunkSize,_flgFinishDownload = save_data_point('0,0',_prevBuf,_tLast,_bufferData)
+        if _flgFinishDownload == 1:                                                          #End of media stream condition (not implemented yet on server side)
+            _prevBuf,_tLast,_req,_chunkSize,_flgFinishDownload,_segNum = save_data_point('-1,-1',_prevBuf,_tLast,_bufferData,_segNum,_maxBuf)
         else:
-            _prevBuf,_tLast,_req,_chunkSize,_flgFinishDownload = save_data_point(_response.decode('utf-8'),_prevBuf,_tLast,_bufferData)
-        debug_prints(_response,_qualiReq)
+            _prevBuf,_tLast,_req,_chunkSize,_flgFinishDownload,_segNum = save_data_point(_response.decode('utf-8'),_prevBuf,_tLast,_bufferData,_segNum,_maxBuf)
+        debug_prints(_response,_qualiReq,_segNum)
 
     _clientSocket.close()
 

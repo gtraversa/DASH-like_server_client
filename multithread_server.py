@@ -45,13 +45,13 @@ def threaded_client(connection,_address):
             if not _data:
                 break
             _bandwidth,_req,_timer,_qualiReq,_segNum,_currentClient = data_parse(_data,_address)            #Return of initial conditions to pass to bandwidth limiter simulation
-            if _flgFirst:
+            if _flgFirst:                                                           #On fisrst connection with a client
                 _currentClient['Bandwidth'] = _bandwidth
                 _currentClient['Max Bandwidth']= _bandwidth
-                _totalBandwidth = _totalBandwidth-_bandwidth
+                _totalBandwidth = _totalBandwidth-_bandwidth                        #Allcoate desired bandwidth to client
                 _flgFirst=0
                 print('First connection for: ' +_address[0]+':'+str(_address[1]))
-            if _totalBandwidth<0:
+            if _totalBandwidth<0:                                                   #Requested bandwidth > available bandwidth
                 bandwidth_sharing()
                 _totalBandwidth = 0
 
@@ -75,7 +75,7 @@ def data_parse(_data,_address):
     _currentClient = 0
     for client in _clients:
         if client['Port']==_address[1]:
-            _currentClient = client
+            _currentClient = client                                             #Select current client based on port number
             break
     _bandwidth = int(_setup[0])
     _req = bool(int(_setup[1]))
@@ -96,13 +96,13 @@ def send_chunk(connection,_bandwidth,_bytesSent,_timer,_chunkLength):
 def save_client(_address):
     """Taskes connection information and stores as a dict in list of clients"""
     _clientDict = {}
-    _address = str(_address).strip("()").replace("'","").split(', ')
+    _address = str(_address).strip("()").replace("'","").split(', ')            #Some parsing to get IP and port  of client socket
     for info in _address:
         if info.__contains__("."):
             _clientDict['IP']=info
         else:
             _clientDict['Port']=int(info)
-    _clientDict['Bandwidth'] = 0
+    _clientDict['Bandwidth'] = 0                                                #Default parameters for every client
     _clientDict['Request']= 1
     _clientDict['Timer']= 0
     _clients.append(_clientDict)
@@ -116,34 +116,34 @@ def conncection_closed(_currentClient):
     """Eliminte client from list of clients when the connection is closed"""
     global _totalBandwidth
     print('Connection closed with: ' +_currentClient['IP']+':'+str(_currentClient['Port']))
-    _totalBandwidth+= _currentClient['Bandwidth']
+    _totalBandwidth+= _currentClient['Bandwidth']                               #Free ALLOCATED bandwidth, not maximum given by client
     _clients.remove(_currentClient)
-    bandwidth_sharing()
+    bandwidth_sharing()                                                         #Reallocate increased bandwidth to other clients
 
 def chunk_quality(_qualiReq,_segNum):
     """Find chunk size for desired quality and send it to the client"""
     _chosenQuali=[]
-    _240p = [50,100,150,200]
+    _240p = [50,100,150,200,50,100,150,200,50,100,150,200,-1]                                                    #Chunk sizes for each segment for each representation in MBit
     _480p=[]
     _720p=[]
     _1080p=[]
     _reprs = {'_240p': _240p,'_480p':_480p,'_720p':_720p,'_1080p':_1080p}
     _chosenQuali = _reprs[str(_qualiReq)]
-    return _chosenQuali[random.randint(0,3)]
+    return _chosenQuali[_segNum]
 
 def bandwidth_sharing(): 
     """Allocate bandwidth to clients proportionally"""
     global _initBandwith
     _totalBandwidthReq = 0
     for client in _clients:
-        _totalBandwidthReq+= client['Max Bandwidth']
+        _totalBandwidthReq+= client['Max Bandwidth']                            #Find the total of the max bandwidth the clients request
     print('Total Requested Bandwidth: '+ str(_totalBandwidthReq))
 
-    if not _totalBandwidthReq:
+    if not _totalBandwidthReq:                                                  #In case of no requests
         _totalBandwidthReq = _initBandwith
-    _scaleFactor = _initBandwith/_totalBandwidthReq
+    _scaleFactor = _initBandwith/_totalBandwidthReq                             #Ratio of available to requested bandwidth
     for client in _clients:
-        client['Bandwidth']=client['Max Bandwidth']*min(_scaleFactor,1)
+        client['Bandwidth']=client['Max Bandwidth']*min(_scaleFactor,1)         #Scaling of each max bandwidth ans setting allocated bandwidth
 
 def main():
     while True:
