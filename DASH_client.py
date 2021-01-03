@@ -16,22 +16,22 @@ import socket,time,sys,getopt
 import matplotlib.pyplot as plt
 
 class Client:
-    def __init__(self,bandwidth=100,timer=1,req=1,maxBuf=10,hostIP = '127.0.0.1', hostPort = 1233, frameSize = 1024, connected = False, qualiReq = '_240p'):
+    def __init__(self,bandwidth=100,timer=1,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p'):
         self.socket = socket.socket()
-        self.host_IP = hostIP
-        self.host_port = hostPort
+        self.host_IP = host_IP
+        self.host_port = host_port
         self.bandwidth = bandwidth
         self.timer = timer
         self.req = req
-        self.max_buf = maxBuf
+        self.max_buf = max_buf
         self.prev_buf = 0
         self.t_last = 0
-        self.frame_size = frameSize
+        self.frame_size = frame_size
         self.start = time.time()
         self.seg_num = 0
         self.flg_finish_download = 0
         self.connected = connected
-        self.quali_req = qualiReq
+        self.quali_req = quali_req
         self.log_name = Client.create_log(self)
     
     def toString(self):
@@ -78,18 +78,14 @@ class Client:
 
     def quali_select(self):
         """Basically the whole project: to implement"""
-        pass
+        self.quali_req= '_240p'
 
-    def connect(self, host_IP = None, host_port = None):
+    def connect(self):
         """Connect to media server"""
-        if host_IP==None:
-            host_IP = self.host_IP
-        if host_port == None:
-            host_port = self.host_port
         print('Waiting for connection')
         while True:
             try:
-                self.socket.connect((host_IP, host_port))
+                self.socket.connect((self.host_IP, self.host_port))
                 self.connected = True
                 break
             except socket.error as e:
@@ -111,12 +107,14 @@ class Client:
 
     def track_media(self):
         """Tracks the current media being streamed and requests the next available chunk"""
-        pass
+        if self.req==1:
+            self.seg_num+=1
 
     def send_request(self):
         """Send media request to server"""
         message = str(self.bandwidth)+','+ str(self.req)+','+str(self.timer) +','+str(self.quali_req)+','+str(self.seg_num)
         self.socket.send(str.encode(message))
+        self.track_media()
 
     def print_data_graph(self):
         """Prints buffer and chunk data graph updated"""
@@ -151,6 +149,7 @@ class Client:
             self.connect()
             time.sleep(1)
         while True:
+            self.quali_select()
             self.send_request()
             self.response = self.socket.recv(self.frame_size)
             self.debug_prints()
@@ -158,6 +157,9 @@ class Client:
                 self.save_data_point('-1,-1')
             else:
                 self.save_data_point(self.response.decode('utf-8'))
+            if self.flg_finish_download==1 and self.prev_buf==0:
+                print('Disconnecting from server...')
+                break
             #self.print_data_graph()
         self.socket.close()
 
