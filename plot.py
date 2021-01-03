@@ -1,11 +1,9 @@
 import matplotlib.pyplot as plt
-import matplotlib.style as style
-
 
 fig = plt.figure()
 ax1 = fig.add_subplot(1,1,1)
 ax2 = ax1.twinx() 
-graph_data = open('100_1_10_buffer.txt','r').read()
+graph_data = open('300_0.1_10_buffer.txt','r').read()
 lines = graph_data.split('\n')
 ts = []
 bufs = []

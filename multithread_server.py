@@ -20,8 +20,8 @@ port = 1233
 
 _clients = []
 _frameSize = 2048
-_initBandwith = 100
-_totalBandwidth = 100
+_initBandwith = 1000
+_totalBandwidth = 1000
 
 try:
     ServerSocket.bind((host, port))
