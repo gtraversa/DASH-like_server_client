@@ -124,9 +124,9 @@ def chunk_quality(_qualiReq,_segNum):
     """Find chunk size for desired quality and send it to the client"""
     _chosenQuali=[]
     _240p = [50,100,150,200,50,100,150,200,50,100,150,200,-1]                                                    #Chunk sizes for each segment for each representation in MBit
-    _480p=[]
-    _720p=[]
-    _1080p=[]
+    _480p=[50,100,150,200,50,100,150,200,50,100,150,200,-1]
+    _720p=[50,100,150,200,50,100,150,200,50,100,150,200,-1]
+    _1080p=[50,100,150,200,50,100,150,200,50,100,150,200,-1]
     _reprs = {'_240p': _240p,'_480p':_480p,'_720p':_720p,'_1080p':_1080p}
     _chosenQuali = _reprs[str(_qualiReq)]
     return _chosenQuali[_segNum]
