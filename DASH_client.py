@@ -177,8 +177,9 @@ class Client:
                 self.save_data_point('-1,-1')
             else:
                 self.save_data_point(self.response.decode('utf-8'))
-            if self.flg_finish_download==1 and self.prev_buf==0:
+            if self.flg_finish_download == 1 and self.prev_buf == 0:
                 print('Disconnecting from server...')
+                self.save_file()
                 break
             self.calc_bandwidth()
             self.quali_select()
@@ -186,8 +187,5 @@ class Client:
             #self.print_data_graph()
         self.socket.close()
 
-    
-
-c = Client()
-c.start_request()
-c.save_file()
+# c = Client()
+# c.start_request()

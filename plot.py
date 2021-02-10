@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 def plot():
     fig, (ax1,ax2,ax3) = plt.subplots(3)
 
-    graph_data = open('100_0.3_10_buffer.txt','r').read()
+    graph_data = open(title,'r').read()
     lines = graph_data.split('\n')
+    lines.pop(-1)
     lines.pop(-1)
     ts = []
     bufs = []
@@ -44,4 +45,3 @@ def plot():
     fig.tight_layout()
     plt.show()
 
-plot()

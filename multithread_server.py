@@ -2,7 +2,7 @@
 Basic server simulating media transmission similar to DASH.
 Some parameters are provided for adjusting the maximum bandwidth,
 the representations available for transmission, the size and length of media chunks,
-and the rime between requests.  Dveloped in conjunction with a client script.
+and the rime between requests.  Developed in conjunction with a client script.
 
 
 (C)2020 Gianluca Traversa, London, United Kingdom.
@@ -20,8 +20,8 @@ port = 1233
 
 _clients = []
 _frameSize = 2048
-_initBandwith = 1000
-_totalBandwidth = 1000
+_initBandwith = 10000
+_totalBandwidth = 10000
 
 try:
     ServerSocket.bind((host, port))
