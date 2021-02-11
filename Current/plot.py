@@ -1,11 +1,13 @@
 import matplotlib.pyplot as plt
+from os import listdir
 
 
+def list_of_files(dir_name):
+    return (f for f in listdir(dir_name) if f.endswith('.' + "txt"))
 
-def plot():
-    fig, (ax1,ax2,ax3) = plt.subplots(3)
-
-    graph_data = open(title,'r').read()
+def plot(f_name,i):
+    fig, (ax1,ax2,ax3) = plt.subplots(3,num=i)
+    graph_data = open(f_name,'r').read()
     lines = graph_data.split('\n')
     lines.pop(-1)
     lines.pop(-1)
@@ -25,7 +27,8 @@ def plot():
             bufs.append(float(buf))
             chunks.append(int(chunk))
             estimated_bandwidth.append(float(est_band))
-        
+    params = f_name.split('_')
+    fig.suptitle('Bandwidth: {}, Req timer: {}, Max buffer: {}'.format(params[0],params[1],params[2]))
 
     ax1.plot(ts,bufs,color = 'tab:red')
     ax1.set_ylabel('Buffer health (s)',fontsize = 10)
@@ -43,5 +46,9 @@ def plot():
     ax3.set_xlabel('Simulation time (s)')
     ax3.grid(color = 'gray', linestyle = ':',which= 'both')
     fig.tight_layout()
-    plt.show()
+    
 
+logs = list_of_files('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client')
+for i,log in enumerate(logs):
+    plot(log,i)
+plt.show()

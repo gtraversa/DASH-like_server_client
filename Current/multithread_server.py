@@ -59,7 +59,7 @@ def threaded_client(connection,_address):
                 _chunkSize = chunk_quality(_qualiReq,_segNum)                       #If client is requesting data
                 send_chunk(connection,_bandwidth=_currentClient['Bandwidth'],_bytesSent=_chunkSize,_timer=_timer,_chunkLength=_chunkLength)
                 print('_________________________')
-                print("Message sent to: "+ _address[0]+':'+str(_address[1]))
+                print("Chunk sent to: "+ _address[0]+':'+str(_address[1]))
             elif not _req:                                                          #Client buffer is full, send 0 length segment to ACK conneciton
                 send_chunk(connection,_bandwidth=_currentClient['Bandwidth'],_bytesSent=0,_timer=_timer,_chunkLength=0)
         conncection_closed(_currentClient)
