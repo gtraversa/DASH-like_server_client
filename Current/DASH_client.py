@@ -18,7 +18,7 @@ import matplotlib.animation as animation
 import numpy as np
 
 class Client:
-    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p'):
+    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None):
         self.socket = socket.socket()
         self.host_IP = host_IP
         self.host_port = host_port
@@ -34,15 +34,11 @@ class Client:
         self.flg_finish_download = 0
         self.connected = connected
         self.quali_req = quali_req
-        self.stream_data = [[0,0,0,bandwidth]]
-        fig, (ax1,ax2,ax3) = plt.subplots(3)
-        self.fig = fig 
-        self.ax1 = ax1
-        self.ax2 = ax1
-        self.ax3 = ax1
+        self.stream_data = [[0,0,0,bandwidth,quali_req]]
         self.log_name = Client.create_log(self)
         self.reprs = ['_240p','_480p','_720p','_1080p']
         self.current_repr = quali_req
+        self.method = method
     
     def toString(self):
         """Print Attributes"""
@@ -62,7 +58,7 @@ class Client:
         return log_name
     
     def save_data_point(self,response):
-        """Function to process buffer health and log it to a file for analysis"""
+        """Function to process buffer health and log it for analysis"""
         now = time.time()
         new_chunk = str(response).split(',')
         point = new_chunk[0]
@@ -74,12 +70,10 @@ class Client:
         t_diff = now-self.start-self.t_last                                         #Time decrease as media plays
         t,buf = now-self.start,(float(point)+self.prev_buf-t_diff)               #Time and buffer health new data points
 
-        if buf > 0:
-            #self.buffer_data.write(str(t)+','+str(buf)+','+str(chunk_size)+'\n')                          #Heathy buffer
+        if buf > 0:                        #Heathy buffer
             self.stream_data.append([t,buf,int(chunk_size)])
         else:                                                                                             #Buffer event for negative buffer health
             buf = 0
-            #self.buffer_data.write(str(t)+','+str(buf)+','+str(chunk_size)+'\n')
             self.stream_data.append([t,buf,int(chunk_size)])
         if buf > self.max_buf:                                                  #Stop requesing media when buffer is saturated
             self.req = 0
@@ -87,15 +81,18 @@ class Client:
             self.req=1
         self.prev_buf,self.t_last = buf,t
 
-    def quali_select(self):
+    def quali_select(self, method):
         """Basically the whole project: to implement"""
         current_repr_idx = self.reprs.index(self.current_repr)
-        if self.stream_data[-1][2]/self.stream_data[-1][3] > 1.1:
-            if current_repr_idx != len(self.reprs):
-                self.quali_req = self.reprs[current_repr_idx+1]               
-        elif self.stream_data[-1][2]/self.stream_data[-1][3] < 0.9:
-            if current_repr_idx != 0:
-                self.quali_req = self.reprs[current_repr_idx-1]     
+        if method == None:
+            self.quali_req = '_240p'
+        elif method == 'naive':
+            if self.stream_data[-1][2]/self.stream_data[-1][3] > 1.1:
+                if current_repr_idx != len(self.reprs):
+                    self.quali_req = self.reprs[current_repr_idx+1]               
+            elif self.stream_data[-1][2]/self.stream_data[-1][3] < 0.9:
+                if current_repr_idx != 0:
+                    self.quali_req = self.reprs[current_repr_idx-1]     
 
 
 
@@ -159,6 +156,7 @@ class Client:
             self.stream_data[-1].append(-1)
         else:
             self.stream_data[-1].append(self.stream_data[-2][3])
+        self.stream_data[-1].append(self.quali_req)
 
     def avg_chunk(self):
         """Calculate average chunk size"""
@@ -182,10 +180,6 @@ class Client:
                 self.save_file()
                 break
             self.calc_bandwidth()
-            self.quali_select()
+            self.quali_select(self.method)
             print(self.stream_data[-1])
-            #self.print_data_graph()
         self.socket.close()
-
-# c = Client()
-# c.start_request()

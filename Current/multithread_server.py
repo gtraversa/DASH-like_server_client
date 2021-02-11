@@ -20,8 +20,8 @@ port = 1233
 
 _clients = []
 _frameSize = 2048
-_initBandwith = 10000
-_totalBandwidth = 10000
+_initBandwith = 700
+_totalBandwidth = 700
 
 try:
     ServerSocket.bind((host, port))
@@ -121,12 +121,12 @@ def conncection_closed(_currentClient):
     bandwidth_sharing()                                                         #Reallocate increased bandwidth to other clients
 
 def chunk_quality(_qualiReq,_segNum):
-    """Find chunk size for desired quality and send it to the client"""
+    """Find chunk size for desired quality and send it to the client, factor of 1.3 between quality sizes"""
     _chosenQuali=[]
     _240p = [50,100,150,200,50,100,150,200,50,100,150,200,-1]                                                    #Chunk sizes for each segment for each representation in MBit
-    _480p=[50,100,150,200,50,100,150,200,50,100,150,200,-1]
-    _720p=[50,100,150,200,50,100,150,200,50,100,150,200,-1]
-    _1080p=[50,100,150,200,50,100,150,200,50,100,150,200,-1]
+    _480p=  [65,130,195,260,65,130,195,260,65,130,195,260,-1]
+    _720p=  [84.5,169,253.5,338,84.5,169,253.5,338,84.5,169,253.5,338,-1]
+    _1080p= [109.85,219.7,329.55,439.4,109.85,219.7,329.55,439.4,109.85,219.7,329.55,439.4,-1]
     _reprs = {'_240p': _240p,'_480p':_480p,'_720p':_720p,'_1080p':_1080p}
     _chosenQuali = _reprs[str(_qualiReq)]
     return _chosenQuali[_segNum]

@@ -2,11 +2,12 @@ import matplotlib.pyplot as plt
 from os import listdir
 
 
+
 def list_of_files(dir_name):
     return (f for f in listdir(dir_name) if f.endswith('.' + "txt"))
 
 def plot(f_name,i):
-    fig, (ax1,ax2,ax3) = plt.subplots(3,num=i)
+    fig, (ax1,ax2,ax3,ax4) = plt.subplots(4,num=i)
     graph_data = open(f_name,'r').read()
     lines = graph_data.split('\n')
     lines.pop(-1)
@@ -15,6 +16,13 @@ def plot(f_name,i):
     bufs = []
     chunks = []
     estimated_bandwidth = []
+    qualis = []
+    quali_vals = {
+        '_240p': 240,
+        '_480p': 480,
+        '_720p': 720,
+        '_1080p': 1080,
+    }
 
     for line in lines:
         if len(line) > 1:
@@ -23,10 +31,13 @@ def plot(f_name,i):
             buf = data_arr[1]
             chunk = data_arr[2]
             est_band= data_arr[3]
+            quali = data_arr[4]
             ts.append(float(t))
             bufs.append(float(buf))
             chunks.append(int(chunk))
             estimated_bandwidth.append(float(est_band))
+            qualis.append(quali_vals[quali])
+
     params = f_name.split('_')
     fig.suptitle('Bandwidth: {}, Req timer: {}, Max buffer: {}'.format(params[0],params[1],params[2]))
 
@@ -45,8 +56,13 @@ def plot(f_name,i):
     ax3.tick_params(axis='y', labelcolor= 'tab:green')
     ax3.set_xlabel('Simulation time (s)')
     ax3.grid(color = 'gray', linestyle = ':',which= 'both')
+
+    ax4.plot(ts,qualis,color = 'tab:purple')
+    ax4.set_ylabel('Quality requested',fontsize = 10)
+    ax4.tick_params(axis='y', labelcolor= 'tab:purple')
+    ax4.set_xlabel('Simulation time (s)')
+    ax4.grid(color = 'gray', linestyle = ':',which= 'both')
     fig.tight_layout()
-    
 
 logs = list_of_files('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client')
 for i,log in enumerate(logs):
