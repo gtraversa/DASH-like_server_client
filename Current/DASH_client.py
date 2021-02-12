@@ -18,8 +18,7 @@ import matplotlib.animation as animation
 import numpy as np
 
 class Client:
-    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None):
-        self.socket = socket.socket()
+    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episodes = 1):
         self.host_IP = host_IP
         self.host_port = host_port
         self.bandwidth = bandwidth
@@ -39,6 +38,7 @@ class Client:
         self.reprs = ['_240p','_480p','_720p','_1080p']
         self.current_repr = quali_req
         self.method = method
+        self.episodes = episodes
     
     def toString(self):
         """Print Attributes"""
@@ -85,25 +85,28 @@ class Client:
         """Basically the whole project: to implement"""
         current_repr_idx = self.reprs.index(self.current_repr)
         if method == None:
-            self.quali_req = '_240p'
+            pass
         elif method == 'naive':
             if self.stream_data[-1][2]/self.stream_data[-1][3] > 1.1:
                 if current_repr_idx != len(self.reprs):
                     self.quali_req = self.reprs[current_repr_idx+1]               
             elif self.stream_data[-1][2]/self.stream_data[-1][3] < 0.9:
                 if current_repr_idx != 0:
-                    self.quali_req = self.reprs[current_repr_idx-1]     
-
+                    self.quali_req = self.reprs[current_repr_idx-1]
+        elif method == 'rl':
+            pass
+        else:
+            self.quali_req = '_240p'     
 
 
     def connect(self):
         """Connect to media server"""
         print('Waiting for connection')
+        self.socket = socket.socket()
         while True:
             try:
                 self.socket.connect((self.host_IP, self.host_port))
                 self.connected = True
-                break
             except socket.error as e:
                 print(str(e))
                 break
@@ -162,24 +165,59 @@ class Client:
         """Calculate average chunk size"""
         pass
 
+    def calculate_reward(self):
+        """Calculate reward for value function"""
+        pass
+
+    def update_value_function(self):
+        """Update the value function according ot Sarsa update"""
+        pass
+
+    def Q_value_function(self,Q,a):
+        """Returns value of state-action pair"""
+        pass
+
+    def disconnect_client(self):
+        """Disconnect from server"""
+        self.socket.close()
+        self.connected = False
+
+    def reset_client(self):
+        """Reset client when reconnecting"""
+        self.prev_buf = 0
+        self.t_last = 0
+        self.start = time.time()
+        self.seg_num = 0
+        self.flg_finish_download = 0
+
     def start_request(self):
         """Begin media requests"""
-        while not self.connected:
-            self.connect()
-            time.sleep(1)
         while True:
-            self.send_request()
-            self.response = self.socket.recv(self.frame_size)
-            self.debug_prints()
-            if self.flg_finish_download == 1:                                                          
-                self.save_data_point('-1,-1')
-            else:
-                self.save_data_point(self.response.decode('utf-8'))
-            if self.flg_finish_download == 1 and self.prev_buf == 0:
-                print('Disconnecting from server...')
-                self.save_file()
+            while not self.connected:
+                self.connect()
+                time.sleep(1)
+            while True:
+                self.send_request()
+                self.response = self.socket.recv(self.frame_size)
+                self.debug_prints()
+                if self.flg_finish_download == 1:                                                          
+                    self.save_data_point('-1,-1')
+                else:
+                    self.save_data_point(self.response.decode('utf-8'))
+                if self.flg_finish_download == 1 and self.prev_buf == 0:
+                    print('Disconnecting from server...')
+                    self.save_file()
+                    break
+                self.calc_bandwidth()
+                self.quali_select(self.method)
+                print(self.stream_data[-1])
+            if self.connected:
+                self.disconnect_client()
+                self.episodes -=1
+                self.reset_client()
+            print(self.episodes)
+            if not self.episodes:
+                self.disconnect_client()
                 break
-            self.calc_bandwidth()
-            self.quali_select(self.method)
-            print(self.stream_data[-1])
-        self.socket.close()
+c = Client(episodes = 2)
+c.start_request()

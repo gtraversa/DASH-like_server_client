@@ -9,7 +9,7 @@ global num_clients
 bands = [200,100,300,500]
 timers = [0.3,0.3,0.7,0.3]
 max_buffers = [10,10,10,10]
-method = 'naive'
+method = None
 clients=[]
 client_params = zip(bands,timers,max_buffers)
 
