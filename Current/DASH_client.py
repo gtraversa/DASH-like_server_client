@@ -18,7 +18,7 @@ import matplotlib.animation as animation
 import numpy as np
 
 class Client:
-    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episodes = 1,gamma = 1, epsilon = 0.1,chunk_length = 3):
+    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episodes = 1,gamma = 1, epsilon = 0.1,chunk_length = 3,Q = None):
         self.host_IP = host_IP
         self.host_port = host_port
         self.bandwidth = bandwidth
@@ -34,7 +34,6 @@ class Client:
         self.connected = connected
         self.quali_req = quali_req
         self.stream_data = [[0,0,0,bandwidth,quali_req]]
-        self.log_name = Client.create_log(self)
         self.reprs = ['_240p','_480p','_720p','_1080p']
         self.current_repr = quali_req
         self.method = method
@@ -42,6 +41,8 @@ class Client:
         self.gamma = gamma
         self.epsilon = epsilon
         self.chunk_length = chunk_length
+        self.log_name = self.create_log()
+        self.Q = Q
     
     def toString(self):
         """Print Attributes"""
@@ -55,7 +56,7 @@ class Client:
     
     def create_log(self):
         """Creates .txt file for logging buffer health with parameters in the name"""
-        log_name = str(self.bandwidth)+'_'+str(self.timer)+'_'+str(self.max_buf)+'_buffer.txt'
+        log_name = str(self.bandwidth)+'_'+str(self.timer)+'_'+str(self.max_buf)+'_'+str(self.method)+'_'+str(self.chunk_length)+'_'+str(self.episodes)+'_buffer.txt'
         self.buffer_data = open(log_name,'w+')                                   
         self.buffer_data.truncate(0)
         return log_name
@@ -90,7 +91,7 @@ class Client:
         current_repr_idx = self.reprs.index(self.current_repr)
         if self.method == None:
             pass
-        elif self.method == 'naive':
+        elif self.method == 'heuristic':
             try:                                               
                 if (self.stream_data[-1][3]*self.chunk_length)/self.stream_data[-1][2]> 1.1:     #if chunk could be downloaded 110% estimated bandwidth increase quality
                     if current_repr_idx != len(self.reprs)-1:
@@ -104,6 +105,16 @@ class Client:
             pass
         elif self.method == 'MAX':
             self.quali_req = self.reprs[-1]
+        elif self.method == 'naive':
+            try:                                               
+                if (self.bandwidth*self.chunk_length)/self.stream_data[-1][2]> 1.1:     #if chunk could be downloaded 110% ideal bandwidth increase quality
+                    if current_repr_idx != len(self.reprs)-1:
+                        self.quali_req = self.reprs[current_repr_idx+1]               
+                elif (self.bandwidth*self.chunk_length)/self.stream_data[-1][2] < 0.9:   #if chunk could be downloaded 90% ideal bandwidth decrease quality
+                    if current_repr_idx != 0:
+                        self.quali_req = self.reprs[current_repr_idx-1]
+            except ZeroDivisionError:
+                pass
         else:
             self.quali_req = '_240p'     
 
@@ -183,7 +194,7 @@ class Client:
         """Update the value function according ot Sarsa update"""
         pass
 
-    def Q_value_function(self,Q,a):
+    def Q_value_function(self,s,a):
         """Returns value of state-action pair"""
         pass
 
@@ -196,9 +207,10 @@ class Client:
         """Reset client when reconnecting"""
         self.prev_buf = 0
         self.t_last = 0
-        self.start = time.time()
+        #self.start = time.time()
         self.seg_num = 0
         self.flg_finish_download = 0
+        self.quali_req = '_240p'
 
     def start_request(self):
         """Begin media requests"""
@@ -216,7 +228,6 @@ class Client:
                     self.save_data_point(self.response.decode('utf-8'))
                 if self.flg_finish_download == 1 and self.prev_buf == 0:
                     print('Disconnecting from server...')
-                    self.save_file()
                     break
                 self.calc_bandwidth()
                 self.quali_select()
@@ -227,8 +238,9 @@ class Client:
                 self.reset_client()
             print(self.episodes)
             if not self.episodes:
+                self.save_file()
                 self.disconnect_client()
                 break
 
-c = Client(episodes = 1, method = 'naive', bandwidth = 500)
+c = Client(episodes = 3, method = 'heuristic', bandwidth = 500)
 c.start_request()
