@@ -34,7 +34,7 @@ def plot(f_name,i):
             quali = data_arr[4]
             ts.append(float(t))
             bufs.append(float(buf))
-            chunks.append(int(chunk))
+            chunks.append(float(chunk))
             estimated_bandwidth.append(float(est_band))
             qualis.append(quali_vals[quali])
 

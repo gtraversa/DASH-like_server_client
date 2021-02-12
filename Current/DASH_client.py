@@ -18,7 +18,7 @@ import matplotlib.animation as animation
 import numpy as np
 
 class Client:
-    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episodes = 1):
+    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episodes = 1,gamma = 1, epsilon = 0.1,chunk_length = 3):
         self.host_IP = host_IP
         self.host_port = host_port
         self.bandwidth = bandwidth
@@ -39,6 +39,9 @@ class Client:
         self.current_repr = quali_req
         self.method = method
         self.episodes = episodes
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.chunk_length = chunk_length
     
     def toString(self):
         """Print Attributes"""
@@ -63,7 +66,7 @@ class Client:
         new_chunk = str(response).split(',')
         point = new_chunk[0]
         chunk_size=new_chunk[1]
-        if int(chunk_size) == -1:                                           #End contition included in the media files
+        if float(chunk_size) == -1.:                                           #End contition included in the media files
             print('Media finished.')
             self.flg_finish_download = 1
             self.req = 0
@@ -71,30 +74,36 @@ class Client:
         t,buf = now-self.start,(float(point)+self.prev_buf-t_diff)               #Time and buffer health new data points
 
         if buf > 0:                        #Heathy buffer
-            self.stream_data.append([t,buf,int(chunk_size)])
+            self.stream_data.append([t,buf,float(chunk_size)])
         else:                                                                                             #Buffer event for negative buffer health
             buf = 0
-            self.stream_data.append([t,buf,int(chunk_size)])
+            self.stream_data.append([t,buf,float(chunk_size)])
         if buf > self.max_buf:                                                  #Stop requesing media when buffer is saturated
             self.req = 0
-        elif int(chunk_size) != -1:
+        elif float(chunk_size) != -1:
             self.req=1
         self.prev_buf,self.t_last = buf,t
 
-    def quali_select(self, method):
+    def quali_select(self):
         """Basically the whole project: to implement"""
+        self.current_repr = self.quali_req
         current_repr_idx = self.reprs.index(self.current_repr)
-        if method == None:
+        if self.method == None:
             pass
-        elif method == 'naive':
-            if self.stream_data[-1][2]/self.stream_data[-1][3] > 1.1:
-                if current_repr_idx != len(self.reprs):
-                    self.quali_req = self.reprs[current_repr_idx+1]               
-            elif self.stream_data[-1][2]/self.stream_data[-1][3] < 0.9:
-                if current_repr_idx != 0:
-                    self.quali_req = self.reprs[current_repr_idx-1]
-        elif method == 'rl':
+        elif self.method == 'naive':
+            try:                                               
+                if (self.stream_data[-1][3]*self.chunk_length)/self.stream_data[-1][2]> 1.1:     #if chunk could be downloaded 110% estimated bandwidth increase quality
+                    if current_repr_idx != len(self.reprs)-1:
+                        self.quali_req = self.reprs[current_repr_idx+1]               
+                elif (self.stream_data[-1][3]*self.chunk_length)/self.stream_data[-1][2] < 0.9:   #if chunk could be downloaded 90% estimated bandwidth decrease quality
+                    if current_repr_idx != 0:
+                        self.quali_req = self.reprs[current_repr_idx-1]
+            except ZeroDivisionError:
+                pass
+        elif self.method == 'rl':
             pass
+        elif self.method == 'MAX':
+            self.quali_req = self.reprs[-1]
         else:
             self.quali_req = '_240p'     
 
@@ -143,6 +152,7 @@ class Client:
 
     def calc_bandwidth(self):
         """Approximates bandwidth from chunk size and download time"""
+        
         if self.stream_data[-1][2]!= 0:
             download_time = self.stream_data[-1][0]-self.stream_data[-2][0]
             estimated_bandwidth = self.stream_data[-1][2]/download_time
@@ -209,7 +219,7 @@ class Client:
                     self.save_file()
                     break
                 self.calc_bandwidth()
-                self.quali_select(self.method)
+                self.quali_select()
                 print(self.stream_data[-1])
             if self.connected:
                 self.disconnect_client()
@@ -219,5 +229,6 @@ class Client:
             if not self.episodes:
                 self.disconnect_client()
                 break
-c = Client(episodes = 2)
+
+c = Client(episodes = 1, method = 'naive', bandwidth = 500)
 c.start_request()
