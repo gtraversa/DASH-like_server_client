@@ -131,7 +131,7 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"hb:t:rm:",["help","bandwidth=","timer=","request","max_buffer="])
     except getopt.GetoptError:
-        print('Wrong inputs retardo')
+        print('Wrong inputs')
         sys.exit(2)
     _bandwidth,_timer,_req,_bufferData,_maxBuf = initial_setup(opts)
     while True:

@@ -43,6 +43,7 @@ class Client:
         self.chunk_length = chunk_length
         self.log_name = self.create_log()
         self.Q = Q
+        self.alpha = 1/(1+self.seg_num)
     
     def toString(self):
         """Print Attributes"""
@@ -235,6 +236,7 @@ class Client:
             if self.connected:
                 self.disconnect_client()
                 self.episodes -=1
+                #TODO figure out wtf to do with Q probably n-step semigratdient SARSA for q(w,s,a)
                 self.reset_client()
             print(self.episodes)
             if not self.episodes:
