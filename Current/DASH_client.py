@@ -16,9 +16,8 @@ import socket,time,sys,getopt
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
-import gym
 
-class Client(gym.Env):
+class Client():
     def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episodes = 1,chunk_length = 3, time_scale = 1):
         self.time_scale = time_scale
         self.host_IP = host_IP
