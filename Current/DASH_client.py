@@ -16,13 +16,15 @@ import socket,time,sys,getopt
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
+import gym
 
-class Client:
-    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episodes = 1,gamma = 1, epsilon = 0.1,chunk_length = 3,Q = None):
+class Client(gym.Env):
+    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episodes = 1,chunk_length = 3, time_scale = 1):
+        self.time_scale = time_scale
         self.host_IP = host_IP
         self.host_port = host_port
-        self.bandwidth = bandwidth
-        self.timer = timer
+        self.bandwidth = bandwidth * self.time_scale
+        self.timer = timer/self.time_scale
         self.req = req
         self.max_buf = max_buf
         self.prev_buf = 0
@@ -38,12 +40,8 @@ class Client:
         self.current_repr = quali_req
         self.method = method
         self.episodes = episodes
-        self.gamma = gamma
-        self.epsilon = epsilon
         self.chunk_length = chunk_length
         self.log_name = self.create_log()
-        self.Q = Q
-        self.alpha = 1/(1+self.seg_num)
     
     def toString(self):
         """Print Attributes"""
@@ -72,7 +70,7 @@ class Client:
             print('Media finished.')
             self.flg_finish_download = 1
             self.req = 0
-        t_diff = now-self.start-self.t_last                                         #Time decrease as media plays
+        t_diff = (now-self.start-self.t_last)*self.time_scale                                         #Time decrease as media plays
         t,buf = now-self.start,(float(point)+self.prev_buf-t_diff)               #Time and buffer health new data points
 
         if buf > 0:                        #Heathy buffer
@@ -128,6 +126,7 @@ class Client:
             try:
                 self.socket.connect((self.host_IP, self.host_port))
                 self.connected = True
+                time.sleep(1/self.time_scale)
             except socket.error as e:
                 print(str(e))
                 break
@@ -177,26 +176,17 @@ class Client:
                     self.stream_data[-1].append(estimated_bandwidth)
                     break
         elif self.stream_data[-1][2] == -1:
-            print('pepe')
             self.stream_data[-1].append(-1)
         else:
             self.stream_data[-1].append(self.stream_data[-2][3])
         self.stream_data[-1].append(self.quali_req)
 
-    def avg_chunk(self):
-        """Calculate average chunk size"""
+    def reset(self):
+        """Return initial state"""
         pass
 
-    def calculate_reward(self):
-        """Calculate reward for value function"""
-        pass
-
-    def update_value_function(self):
-        """Update the value function according ot Sarsa update"""
-        pass
-
-    def Q_value_function(self,s,a):
-        """Returns value of state-action pair"""
+    def step(self, actiion):
+        """Return step data"""
         pass
 
     def disconnect_client(self):
@@ -208,7 +198,6 @@ class Client:
         """Reset client when reconnecting"""
         self.prev_buf = 0
         self.t_last = 0
-        #self.start = time.time()
         self.seg_num = 0
         self.flg_finish_download = 0
         self.quali_req = '_240p'
@@ -218,7 +207,6 @@ class Client:
         while True:
             while not self.connected:
                 self.connect()
-                time.sleep(1)
             while True:
                 self.send_request()
                 self.response = self.socket.recv(self.frame_size)
@@ -244,5 +232,5 @@ class Client:
                 self.disconnect_client()
                 break
 
-c = Client(episodes = 3, method = 'heuristic', bandwidth = 500)
+c = Client(episodes = 3, method = 'heuristic', bandwidth = 500,time_scale = 1000)
 c.start_request()
