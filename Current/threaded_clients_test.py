@@ -1,6 +1,4 @@
-import DASH_client as client
-#import multithread_server as Server
-from multiprocessing import Process
+import Current.DASH_client as client
 from _thread import start_new_thread
 from time import sleep
 

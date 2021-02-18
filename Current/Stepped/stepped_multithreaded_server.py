@@ -91,7 +91,7 @@ def send_chunk(connection,_bandwidth,_bytesSent,_timer,_chunkLength):
     _sendTime = _bytesSent / _bandwidth                                         #Equivalent download time of chunk with given size (MBit) and bandwidth (MBit/s)
     _timeToSend=max(_sendTime,_timer)                                           #Local transfer de layed by equivalent 'download' time OR minimum request time '_timer'
     reply = str(_chunkLength) + ',' + str(_bytesSent) + ',' + str(_timeToSend)  #Length of chunk in seconds sent back to client
-    connection.sendall(str.enclode(reply))   
+    connection.sendall(str.encode(reply))   
 
 def save_client(_address):
     """Taskes connection information and stores as a dict in list of clients"""
