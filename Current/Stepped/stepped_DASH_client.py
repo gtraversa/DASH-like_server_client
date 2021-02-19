@@ -20,12 +20,14 @@ import gym
 from gym import spaces
 
 class Client(gym.Env):
-    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1234, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episode_num=1,chunk_length = 3, time_scale = 1):
+    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1234, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episode_num=1,chunk_length = 3, time_scale = 1,sigma = 10):
         self.time_scale = time_scale
         self.host_IP = host_IP
         self.host_port = host_port
         Client.connect(self)
-        self.bandwidth = bandwidth * self.time_scale
+        self.sigma = sigma
+        self.start_bandwidth = bandwidth
+        self.bandwidth = sigma*np.random.randn()+ self.start_bandwidth * self.time_scale
         self.timer = timer/self.time_scale
         self.req = req
         self.max_buf = max_buf
@@ -115,6 +117,7 @@ class Client(gym.Env):
         print('Time to Send= '+_timeToSend)
         print('Chunk quality= '+_repr)                   
         print('PrevBuf= '+ str(self.prev_buf))
+        print('Bandwidth requested= '+str(self.bandwidth))
         print('Segment Number= '+ str(self.seg_num))
 
     def track_media(self):
@@ -146,12 +149,15 @@ class Client(gym.Env):
         self.flg_finish_download = 0
         self.quali_req = '_240p'
         self.stream_data = [[0,0,0,self.bandwidth,self.quali_req]]
+        self.bandwidth = self.sigma*np.random.randn()+ self.start_bandwidth * self.time_scale
         return np.array([0,0,self.max_buf, self.bandwidth, 0])
         
 
-    def calc_reward(self):
+    def calc_reward(self,action):
         """Calculate the reward for the last time step"""
-        return -1
+        if self.prev_buf == 0 and self.seg_num != 0 and self.flg_finish_download != 1:
+            return -50.0
+        return min(0, self.prev_buf-self.max_buf)+(action-len(self.reprs)+1)
 
     def is_done(self):
         """Checks if client is done"""
@@ -183,11 +189,11 @@ class Client(gym.Env):
             print('Disconnecting from server...')
             #self.disconnect_client()
         self.time_step(float(new_chunk[2]))
-        reward = self.calc_reward
+        reward = self.calc_reward(action)
         done = self.is_done()
         info = {}
         new_state = np.array([self.prev_buf,float(new_chunk[1]),self.max_buf, self.bandwidth, self.reprs.index(self.quali_req)])
-        return new_state,float(-1),done,info
+        return new_state,reward,done,info
 
     def disconnect_client(self):
         """Disconnect from server"""
