@@ -77,7 +77,7 @@ def data_parse(_data,_address):
         if client['Port']==_address[1]:
             _currentClient = client                                             #Select current client based on port number
             break
-    _bandwidth = int(_setup[0])
+    _bandwidth = float(_setup[0])
     _req = bool(int(_setup[1]))
     _currentClient['Request']=_req
     _timer = float(_setup[2])
@@ -123,10 +123,18 @@ def conncection_closed(_currentClient):
 def chunk_quality(_qualiReq,_segNum):
     """Find chunk size for desired quality and send it to the client, factor of 1.3 between quality sizes"""
     _chosenQuali=[]
-    _240p = [50,100,150,200,50,100,150,200,50,100,150,200,-1]                                                    #Chunk sizes for each segment for each representation in MBit
-    _480p=  [65,130,195,260,65,130,195,260,65,130,195,260,-1]
-    _720p=  [84.5,169,253.5,338,84.5,169,253.5,338,84.5,169,253.5,338,-1]
-    _1080p= [109.85,219.7,329.55,439.4,109.85,219.7,329.55,439.4,109.85,219.7,329.55,439.4,-1]
+    _240p = [138.26727381, 139.39557541,  84.76826744, 132.31976631, 191.90747741,
+  257.26611502, 101.49441773, 154.82643371, 163.61349655, 199.09523249,
+  189.72123388, 158.23856659,-1]                                                   #Chunk sizes for each segment for each representation in MBit
+    _480p=  [193.50164605, 189.51368355, 180.19117712 ,188.86945977 ,146.92720941,
+  169.25154364 ,146.88594879, 157.76630559, 101.40162505 ,137.00791215,
+  257.29210629, 219.02587321,-1]
+    _720p=  [250.32185961 ,166.68425615 ,101.71225049, 201.86300748, 141.50680893,
+  281.95441345, 214.92698858, 274.38733237 ,220.31290097 ,213.16412909,
+  219.66879632 ,127.73394614,-1]
+    _1080p= [217.11736342 ,243.47865196, 283.47872258 ,349.89512049 ,277.74364483,
+  178.352821  , 295.73772672, 314.72222805 ,181.97570909, 347.11701823,
+  258.20357207, 365.63517902,-1]
     _reprs = {'_240p': _240p,'_480p':_480p,'_720p':_720p,'_1080p':_1080p}
     _chosenQuali = _reprs[str(_qualiReq)]
     return _chosenQuali[_segNum]
