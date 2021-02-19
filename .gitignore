@@ -3,3 +3,4 @@
 *.pyc
 *.zip
 *.png
+segment_creator.py
