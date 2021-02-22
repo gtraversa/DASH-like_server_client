@@ -59,19 +59,18 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         return True
 
 # Create log dir
-log_dir = "Desktop/Dissertation/Server-client/Current/Stepped/plotting_test-1/"
+log_dir = "plotting_test-1/"
 os.makedirs(log_dir, exist_ok=True)
 
 # Create and wrap the environment
 env = client.Client(bandwidth = 100, sigma = 30)
 env = Monitor(env, log_dir)
-
-model = DQN('MlpPolicy', env, verbose=0)
+model = DQN('MlpPolicy', env, verbose=0,learning_rate = 2.5e-3)
 # Create the callback: check every 1000 steps
 callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
 # Train the agent
-time_steps = 2e6
+time_steps = 2e5
 model.learn(total_timesteps=int(time_steps), callback=callback)
-
-plot_results([log_dir], time_steps, results_plotter.X_TIMESTEPS, "RL_DASH_client")
+model.save("bandwidth = 100_sigma = 30_learning_rate = 2.5e-3_time_steps = 2e5")
+plot_results([log_dir], time_steps, results_plotter.X_TIMESTEPS, "{}".format(2.5e-3))
 plt.show()
