@@ -16,6 +16,7 @@ import socket,time,sys,getopt
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
+from stable_baselines3 import DQN
 
 class Client():
     def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episodes = 1,chunk_length = 3, time_scale = 1):
@@ -41,6 +42,7 @@ class Client():
         self.episodes = episodes
         self.chunk_length = chunk_length
         self.log_name = self.create_log()
+        self.model = DQN.load("plotting_test-1/best_model")
     
     def toString(self):
         """Print Attributes"""
@@ -100,7 +102,11 @@ class Client():
             except ZeroDivisionError:
                 pass
         elif self.method == 'rl':
-            pass
+
+            obs = np.array([self.prev_buf,self.stream_data[-1][2],self.max_buf, self.bandwidth, self.reprs.index(self.quali_req)])
+            action, _states = self.model.predict(obs, deterministic = True)
+            self.quali_req = self.reprs[action]
+            
         elif self.method == 'MAX':
             self.quali_req = self.reprs[-1]
         elif self.method == 'naive':
@@ -184,10 +190,6 @@ class Client():
         """Return initial state"""
         pass
 
-    def step(self, actiion):
-        """Return step data"""
-        pass
-
     def disconnect_client(self):
         """Disconnect from server"""
         self.socket.close()
@@ -223,7 +225,6 @@ class Client():
             if self.connected:
                 self.disconnect_client()
                 self.episodes -=1
-                #TODO figure out wtf to do with Q probably n-step semigratdient SARSA for q(w,s,a)
                 self.reset_client()
             print(self.episodes)
             if not self.episodes:
@@ -231,5 +232,5 @@ class Client():
                 self.disconnect_client()
                 break
 
-c = Client(episodes = 3, method = 'heuristic', bandwidth = 500,time_scale = 1000)
+c = Client( quali_req='_240p', bandwidth = 100 )
 c.start_request()
