@@ -1,17 +1,17 @@
-import Current.DASH_client as client
+import DASH_client as client
 from _thread import start_new_thread
 from time import sleep
 
 
 global num_clients
-bands = [200,100,300,500]
-timers = [0.3,0.3,0.7,0.3]
-max_buffers = [10,10,10,10]
-method = None
+bands = [100,100,100,100,100]
+timers = [0.3,0.3,0.3,0.3,0.3]
+max_buffers = [10,10,10,10,10]
+method = ['rl','heuristic', 'MAX','naive',None ]
 clients=[]
-client_params = zip(bands,timers,max_buffers)
+client_params = zip(bands,timers,max_buffers,method)
 
-for band, timer, max_buf in client_params:
+for band, timer, max_buf,method in client_params:
     clients.append(client.Client(bandwidth = band, timer = timer, max_buf = max_buf, method = method))
 num_clients = len(clients)
 

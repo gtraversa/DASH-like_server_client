@@ -37,7 +37,7 @@ def plot(f_name,i):
             qualis.append(quali_vals[quali])
 
     params = f_name.split('_')
-    fig.suptitle('Bandwidth: {}, Req timer: {}, Max buffer: {}, Optimization: {}, Episodes: {}'.format(params[0],params[1],params[2],params[3],params[4]))
+    fig.suptitle('Bandwidth: {}, Req timer: {}, Max buffer: {}, Optimization: {}, Episodes: {}'.format(params[0],params[1],params[2],params[3],params[5]))
 
     ax1.plot(ts,bufs,color = 'tab:red')
     ax1.set_ylabel('Buffer health (s)',fontsize = 10)

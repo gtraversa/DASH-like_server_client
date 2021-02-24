@@ -42,7 +42,7 @@ class Client():
         self.episodes = episodes
         self.chunk_length = chunk_length
         self.log_name = self.create_log()
-        self.model = DQN.load("plotting_test-1/best_model")
+        self.model = DQN.load("plotting_test-1/new_reward/best_model")
     
     def toString(self):
         """Print Attributes"""
@@ -148,6 +148,7 @@ class Client():
         print('Chunk quality= '+_repr)                   
         print('PrevBuf= '+ str(self.prev_buf))
         print('Segment Number= '+ str(self.seg_num))
+        print('Request= '+str(bool(self.req)))
 
     def track_media(self):
         """Tracks the current media being streamed and requests the next available chunk"""
@@ -221,7 +222,6 @@ class Client():
                     break
                 self.calc_bandwidth()
                 self.quali_select()
-                print(self.stream_data[-1])
             if self.connected:
                 self.disconnect_client()
                 self.episodes -=1
@@ -232,5 +232,5 @@ class Client():
                 self.disconnect_client()
                 break
 
-c = Client( quali_req='_240p', bandwidth = 100 )
-c.start_request()
+# c = Client( method = 'rl', bandwidth = 80)
+# c.start_request()
