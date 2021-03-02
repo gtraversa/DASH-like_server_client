@@ -21,7 +21,7 @@ import gym
 from gym import spaces
 
 class Client(gym.Env):
-    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1234, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episode_num=1,chunk_length = 3, time_scale = 1,sigma = 10):
+    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1234, frame_size = 1024, connected = False, quali_req = '_240p',method = None,chunk_length = 3, time_scale = 1,sigma = 10):
         self.time_scale = time_scale
         self.host_IP = host_IP
         self.host_port = host_port
@@ -43,9 +43,8 @@ class Client(gym.Env):
         self.reprs = ['_240p','_480p','_720p','_1080p']
         self.current_repr = quali_req
         self.method = method
-        self.episode_num = episode_num
         self.chunk_length = chunk_length
-        self.log_name = self.create_log()
+        #self.log_name = self.create_log()
         self.current_time = 0
         self.action_space = spaces.Discrete(len(self.reprs))
         self.observation_space = spaces.Box(np.array([0,0,0,0,0]),np.array([self.max_buf+self.chunk_length,1024,20,1024,len(self.reprs)])) #buffer,chunk,max_buf,max_band,prev_quality
@@ -164,7 +163,7 @@ class Client(gym.Env):
 
     def is_done(self):
         """Checks if client is done"""
-        if self.flg_finish_download == 1 and self.prev_buf == 0:
+        if self.flg_finish_download == 1 :
             return True
         else:
             return False
@@ -181,16 +180,12 @@ class Client(gym.Env):
             self.response = self.socket.recv(self.frame_size)
         except socket.error as e:
             print(e)
-            print('step')
         new_chunk= str(self.response.decode('utf-8')).split(',')
         self.debug_prints()
         if self.flg_finish_download == 1:                                                          
-            self.save_data_point('-1,-1,-1')
+            pass
         else:
             self.save_data_point(self.response.decode('utf-8'))
-        if self.flg_finish_download == 1 and self.prev_buf == 0:
-            print('Disconnecting from server...')
-            #self.disconnect_client()
         self.time_step(float(new_chunk[2]))
         reward = self.calc_reward(action)
         done = self.is_done()
@@ -202,3 +197,42 @@ class Client(gym.Env):
         """Disconnect from server"""
         self.socket.close()
         self.connected = False
+
+    def quali_select(self):
+        """Basically the whole project: to implement"""
+        self.current_repr = self.quali_req
+        current_repr_idx = self.reprs.index(self.current_repr)
+        if self.method == None:
+            return 0
+        elif self.method == 'heuristic':
+            try:                                               
+                if (self.stream_data[-1][3]*self.chunk_length)/self.stream_data[-1][2]> 1.1:     #if chunk could be downloaded 110% estimated bandwidth increase quality
+                    if current_repr_idx != len(self.reprs)-1:
+                        return current_repr_idx+1 
+                    else:
+                        return current_repr_idx              
+                elif (self.stream_data[-1][3]*self.chunk_length)/self.stream_data[-1][2] < 0.9:   #if chunk could be downloaded 90% estimated bandwidth decrease quality
+                    if current_repr_idx != 0:
+                        return current_repr_idx -1
+                    else:
+                        return current_repr_idx
+            except ZeroDivisionError:
+                return current_repr_idx
+        elif self.method == 'MAX':
+            return len(self.reprs)
+        elif self.method == 'naive':
+            try:                                               
+                if (self.bandwidth*self.chunk_length)/self.stream_data[-1][2]> 1.1:     #if chunk could be downloaded 110% ideal bandwidth increase quality
+                    if current_repr_idx != len(self.reprs)-1:   
+                        return current_repr_idx+1   
+                    else:
+                        return current_repr_idx        
+                elif (self.bandwidth*self.chunk_length)/self.stream_data[-1][2] < 0.9:   #if chunk could be downloaded 90% ideal bandwidth decrease quality
+                    if current_repr_idx != 0:
+                        return current_repr_idx-1 
+                    else:
+                        return current_repr_idx
+            except ZeroDivisionError:
+                return current_repr_idx
+        else:
+            return 0
