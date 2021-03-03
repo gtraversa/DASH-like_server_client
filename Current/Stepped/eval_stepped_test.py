@@ -11,8 +11,8 @@ runs = 100
 
 
 def setup():
-    bands = [x for x in range(1,50,10)]
-    methods = ['rl', 'MAX','naive','heuristic']
+    bands = [x for x in range(1,200)]
+    methods = ['MAX','rl','heuristic']
     for method in methods:
         rewards,actions=evaluate(bands,method)
         plot_results(bands, mean_rewards=rewards, mean_actions = actions,method = method)
@@ -30,6 +30,7 @@ def evaluate(bands,method):
 
         for i in range(runs):
             action= predict_action(method = method,obs=obs,env=env)
+            print(action)
             obs, reward, done, info = env.step(action)
             observations.append(obs)
             rewards.append(reward)
@@ -66,7 +67,7 @@ def predict_action(method,obs,env):
         return action
     else:
         action = env.quali_select()
-        return int(action)-1
+        return int(action)
 
 setup()
 #TODO: error is in naive and heuristic functions when they throw exception
