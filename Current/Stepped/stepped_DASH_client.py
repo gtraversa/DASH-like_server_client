@@ -39,7 +39,7 @@ class Client(gym.Env):
         self.flg_finish_download = 0
         self.connected = connected
         self.quali_req = quali_req
-        self.stream_data = [[0,0,0,quali_req]]
+        self.stream_data = [[0,0,0,quali_req,self.start_bandwidth]]
         self.reprs = ['_240p','_480p','_720p','_1080p']
         self.current_repr = quali_req
         self.method = method
@@ -72,14 +72,12 @@ class Client(gym.Env):
         new_chunk = str(response).split(',')
         point = new_chunk[0]
         chunk_size=new_chunk[1]
-        _timeToSend = new_chunk[2]
+        _timeToSend = float(new_chunk[2])
         if float(chunk_size) == -1.:                                           #End contition included in the media files
             print('Media finished.')
             self.flg_finish_download = 1
             self.req = 0
-        t_diff = (self.current_time-self.t_last)*self.time_scale                                         #Time decrease as media plays
-        t,buf = self.current_time,(float(point)+self.prev_buf-t_diff)               #Time and buffer health new data points
-
+        t,buf = self.current_time,(float(point)+self.prev_buf-_timeToSend)               #Time and buffer health new data points
         if buf > 0:                        #Heathy buffer
             self.stream_data.append([t,buf,float(chunk_size),self.quali_req])
         else:                                                                                             #Buffer event for negative buffer health
@@ -148,8 +146,9 @@ class Client(gym.Env):
         self.seg_num = 0
         self.flg_finish_download = 0
         self.quali_req = '_240p'
-        self.stream_data = [[0,0,0,self.bandwidth,self.quali_req]]
-        self.bandwidth = abs(self.sigma*np.random.randn()+ self.start_bandwidth * self.time_scale)
+        self.stream_data = [[0,0,0,self.quali_req,self.start_bandwidth]]
+        self.bandwidth = abs(self.sigma*np.random.randn()+ self.start_bandwidth )
+        self.current_time=0
         return np.array([0,0,self.max_buf, self.bandwidth, 0])
         
 
@@ -182,11 +181,13 @@ class Client(gym.Env):
             print(e)
         new_chunk= str(self.response.decode('utf-8')).split(',')
         self.debug_prints()
+        self.time_step(float(new_chunk[2]))
         if self.flg_finish_download == 1:                                                          
             pass
         else:
             self.save_data_point(self.response.decode('utf-8'))
-        self.time_step(float(new_chunk[2]))
+        
+        self.calc_bandwidth(float(new_chunk[2]))
         reward = self.calc_reward(action)
         done = self.is_done()
         info = {}
@@ -206,33 +207,44 @@ class Client(gym.Env):
             return 0
         elif self.method == 'heuristic':
             try:                                               
-                if (self.stream_data[-1][3]*self.chunk_length)/self.stream_data[-1][2]> 1.1:     #if chunk could be downloaded 110% estimated bandwidth increase quality
+                if (self.stream_data[-1][4]*self.chunk_length)/self.stream_data[-1][2]> 1.1:     #if chunk could be downloaded 110% estimated bandwidth increase quality
                     if current_repr_idx != len(self.reprs)-1:
                         return current_repr_idx+1 
                     else:
                         return current_repr_idx              
-                elif (self.stream_data[-1][3]*self.chunk_length)/self.stream_data[-1][2] < 0.9:   #if chunk could be downloaded 90% estimated bandwidth decrease quality
+                elif (self.stream_data[-1][4]*self.chunk_length)/self.stream_data[-1][2] < 0.9:   #if chunk could be downloaded 90% estimated bandwidth decrease quality
+                    print('reduce')
                     if current_repr_idx != 0:
                         return current_repr_idx -1
                     else:
                         return current_repr_idx
+                else:
+                    return current_repr_idx
             except ZeroDivisionError:
                 return current_repr_idx
         elif self.method == 'MAX':
-            return len(self.reprs)
-        elif self.method == 'naive':
-            try:                                               
-                if (self.bandwidth*self.chunk_length)/self.stream_data[-1][2]> 1.1:     #if chunk could be downloaded 110% ideal bandwidth increase quality
-                    if current_repr_idx != len(self.reprs)-1:   
-                        return current_repr_idx+1   
-                    else:
-                        return current_repr_idx        
-                elif (self.bandwidth*self.chunk_length)/self.stream_data[-1][2] < 0.9:   #if chunk could be downloaded 90% ideal bandwidth decrease quality
-                    if current_repr_idx != 0:
-                        return current_repr_idx-1 
-                    else:
-                        return current_repr_idx
-            except ZeroDivisionError:
-                return current_repr_idx
+            return len(self.reprs)-1
         else:
             return 0
+
+
+    def calc_bandwidth(self, download_time):
+        """Approximates bandwidth from chunk size and download time"""
+        
+        if self.stream_data[-1][2]!= 0:
+            estimated_bandwidth = self.stream_data[-1][2]/download_time
+            self.stream_data[-1].append(estimated_bandwidth)
+        elif self.req==1:
+            flg=0
+            for i in range(1,len(self.stream_data)):
+                if self.stream_data[-i][2] !=0:
+                    estimated_bandwidth = self.stream_data[-i][2]/download_time
+                    self.stream_data[-1].append(estimated_bandwidth)
+                    flg = 1
+                    break
+            if not flg:
+                self.stream_data[-1].append(self.stream_data[-2][4])
+        elif self.stream_data[-1][2] == -1:
+            self.stream_data[-1].append(-1)
+        else:
+            self.stream_data[-1].append(self.stream_data[-2][4])
