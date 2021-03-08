@@ -21,14 +21,30 @@ import gym
 from gym import spaces
 
 class Client(gym.Env):
-    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1234, frame_size = 1024, connected = False, quali_req = '_240p',method = None,chunk_length = 3, time_scale = 1,sigma = 10):
+    def __init__(self,  bandwidth=100,
+                        timer=0.3,
+                        req=1,
+                        max_buf=10,
+                        host_IP = '127.0.0.1',
+                        host_port = 1234, 
+                        frame_size = 1024, 
+                        connected = False, 
+                        quali_req = '_240p',
+                        method = None,
+                        chunk_length = 3,
+                         time_scale = 1,
+                        sigma = 10,
+                        training = False,
+                        min_train = 1, 
+                        max_train = 100,
+                        quali_param = 1):
         self.time_scale = time_scale
         self.host_IP = host_IP
         self.host_port = host_port
         Client.connect(self)
         self.sigma = sigma
         self.start_bandwidth = bandwidth
-        self.bandwidth = abs(sigma*np.random.randn()+ self.start_bandwidth * self.time_scale)
+        self.bandwidth = abs(sigma*np.random.randn()+ self.start_bandwidth )
         self.timer = timer/self.time_scale
         self.req = req
         self.max_buf = max_buf
@@ -48,6 +64,10 @@ class Client(gym.Env):
         self.current_time = 0
         self.action_space = spaces.Discrete(len(self.reprs))
         self.observation_space = spaces.Box(np.array([0,0,0,0,0]),np.array([self.max_buf+self.chunk_length,1024,20,1024,len(self.reprs)])) #buffer,chunk,max_buf,max_band,prev_quality
+        self.training = training
+        self.min_train = min_train
+        self.max_train = max_train
+        self.quali_param = quali_param
         
     
     def toString(self):
@@ -74,7 +94,7 @@ class Client(gym.Env):
         chunk_size=new_chunk[1]
         _timeToSend = float(new_chunk[2])
         if float(chunk_size) == -1.:                                           #End contition included in the media files
-            print('Media finished.')
+            #print('Media finished.')
             self.flg_finish_download = 1
             self.req = 0
         t,buf = self.current_time,(float(point)+self.prev_buf-_timeToSend)               #Time and buffer health new data points
@@ -91,7 +111,7 @@ class Client(gym.Env):
 
     def connect(self):
         """Connect to media server"""
-        print('Waiting for connection')
+        #print('Waiting for connection')
         self.socket = socket.socket()
         while True:
             try:
@@ -99,7 +119,7 @@ class Client(gym.Env):
                 self.connected = True
                 time.sleep(1/self.time_scale)
             except socket.error as e:
-                print(str(e))
+                #print(str(e))
                 break
 
     def debug_prints(self):
@@ -147,7 +167,10 @@ class Client(gym.Env):
         self.flg_finish_download = 0
         self.quali_req = '_240p'
         self.stream_data = [[0,0,0,self.quali_req,self.start_bandwidth]]
-        self.bandwidth = abs(self.sigma*np.random.randn()+ self.start_bandwidth )
+        if not self.training:
+            self.bandwidth = abs(self.sigma*np.random.randn()+ self.start_bandwidth )
+        else:
+            self.bandwidth = np.random.uniform(low = self.min_train, high = self.max_train)
         self.current_time=0
         return np.array([0,0,self.max_buf, self.bandwidth, 0])
         
@@ -155,10 +178,10 @@ class Client(gym.Env):
     def calc_reward(self,action):
         """Calculate the reward for the last time step"""
         if self.prev_buf == 0 and self.seg_num != 0 and self.flg_finish_download != 1:
-            return -75.0
+            return -500
         if not self.req:
             return -1
-        return min(0, self.prev_buf-self.max_buf)+(action-len(self.reprs)+1)
+        return min(0, self.prev_buf-self.max_buf)+((action-len(self.reprs)+1)*self.quali_param)
 
     def is_done(self):
         """Checks if client is done"""
@@ -180,7 +203,7 @@ class Client(gym.Env):
         except socket.error as e:
             print(e)
         new_chunk= str(self.response.decode('utf-8')).split(',')
-        self.debug_prints()
+        #self.debug_prints()
         self.time_step(float(new_chunk[2]))
         if self.flg_finish_download == 1:                                                          
             pass
@@ -213,7 +236,6 @@ class Client(gym.Env):
                     else:
                         return current_repr_idx              
                 elif (self.stream_data[-1][4]*self.chunk_length)/self.stream_data[-1][2] < 0.9:   #if chunk could be downloaded 90% estimated bandwidth decrease quality
-                    print('reduce')
                     if current_repr_idx != 0:
                         return current_repr_idx -1
                     else:
@@ -226,7 +248,6 @@ class Client(gym.Env):
             return len(self.reprs)-1
         else:
             return 0
-
 
     def calc_bandwidth(self, download_time):
         """Approximates bandwidth from chunk size and download time"""

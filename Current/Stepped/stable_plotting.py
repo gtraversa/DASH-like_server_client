@@ -3,6 +3,7 @@ import os
 import gym
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 import stepped_DASH_client as client
 
@@ -24,12 +25,14 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
       It must contains the file created by the ``Monitor`` wrapper.
     :param verbose: (int)
     """
-    def __init__(self, check_freq: int, log_dir: str, verbose=1):
+    def __init__(self, check_freq: int, log_dir: str, verbose=1, total_time_steps = 1):
         super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.log_dir = log_dir
         self.save_path = os.path.join(log_dir, 'best_model')
         self.best_mean_reward = -np.inf
+        self.total_time_steps = total_time_steps
+        self.start_time = time.time()
 
     def _init_callback(self) -> None:
         # Create folder if needed
@@ -37,14 +40,16 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
             os.makedirs(self.save_path, exist_ok=True)
 
     def _on_step(self) -> bool:
+        if self.num_timesteps % (self.check_freq*10) == 0:
+          if self.verbose >0:
+              print('{0:.0f}/{1:.0f} training steps, {2:.2%} done, Time elapsed: {3:.2f}s'.format(self.num_timesteps,self.total_time_steps,self.num_timesteps/self.total_time_steps,time.time()-self.start_time))
         if self.n_calls % self.check_freq == 0:
-
           # Retrieve training reward
           x, y = ts2xy(load_results(self.log_dir), 'timesteps')
           if len(x) > 0:
               # Mean training reward over the last 100 episodes
               mean_reward = np.mean(y[-100:])
-              if self.verbose > 0:
+              if self.verbose > 1:
                 print("Num timesteps: {}".format(self.num_timesteps))
                 print("Best mean reward: {:.2f} - Last mean reward per episode: {:.2f}".format(self.best_mean_reward, mean_reward))
 
@@ -52,25 +57,31 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
               if mean_reward > self.best_mean_reward:
                   self.best_mean_reward = mean_reward
                   # Example for saving best model
-                  if self.verbose > 0:
+                  if self.verbose > 2:
                     print("Saving new best model to {}".format(self.save_path))
                   self.model.save(self.save_path)
 
         return True
 
 # Create log dir
-log_dir = "plotting_test-1/new_reward"
+#quali_params = [0,0.3,0.5,0.7,1,1.3,1.5]
+#for param in quali_params:
+log_dir = "models/uniform_training_quali_param_{}".format(1)
 os.makedirs(log_dir, exist_ok=True)
 
 # Create and wrap the environment
-env = client.Client(bandwidth = 70, sigma = 30)
+env = client.Client(training = True, min_train = 1, max_train = 300, quali_param = 1)
 env = Monitor(env, log_dir)
-model = DQN('MlpPolicy', env, verbose=0,learning_rate = 2.5e-3)
+model = DQN('MlpPolicy', env, verbose=0,learning_rate = 1e-4)
 # Create the callback: check every 1000 steps
-callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
 # Train the agent
-time_steps = 2e5
+time_steps = 3e5
+callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir,verbose = 1, total_time_steps=int(time_steps))
+
 model.learn(total_timesteps=int(time_steps), callback=callback)
-model.save("bandwidth = 100_sigma = 30_learning_rate = 2.5e-3_time_steps = 2e5")
-plot_results([log_dir], time_steps, results_plotter.X_TIMESTEPS, "{}".format(2.5e-3))
+#model.save("bandwidth = uniform(30,200)_learning_rate = 2.5e-3_time_steps = 2e5")
+plot_results([log_dir], time_steps, results_plotter.X_TIMESTEPS, "Q-parameter exploration",label = str(1))
+plt.legend()
+plt.savefig('learning_curve_q_parameters.png')
+env.disconnect_client()
 plt.show()

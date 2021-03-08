@@ -19,12 +19,22 @@ import numpy as np
 from stable_baselines3 import DQN
 
 class Client():
-    def __init__(self,bandwidth=100,timer=0.3,req=1,max_buf=10,host_IP = '127.0.0.1', host_port = 1233, frame_size = 1024, connected = False, quali_req = '_240p',method = None, episodes = 1,chunk_length = 3, time_scale = 1):
-        self.time_scale = time_scale
+    def __init__(self,  bandwidth=100,
+                        timer=0.3,
+                        req=1,
+                        max_buf=10,
+                        host_IP = '127.0.0.1', 
+                        host_port = 1233, 
+                        frame_size = 1024, 
+                        connected = False, 
+                        quali_req = '_240p',
+                        method = None, 
+                        episodes = 1,
+                        chunk_length = 3):
         self.host_IP = host_IP
         self.host_port = host_port
-        self.bandwidth = bandwidth * self.time_scale
-        self.timer = timer/self.time_scale
+        self.bandwidth = bandwidth
+        self.timer = timer
         self.req = req
         self.max_buf = max_buf
         self.prev_buf = 0
@@ -42,7 +52,7 @@ class Client():
         self.episodes = episodes
         self.chunk_length = chunk_length
         self.log_name = self.create_log()
-        self.model = DQN.load("plotting_test-1/new_reward/best_model")
+        self.model = DQN.load('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models/uniform_training_quali_param_1/best_model')
     
     def toString(self):
         """Print Attributes"""
@@ -71,7 +81,7 @@ class Client():
             print('Media finished.')
             self.flg_finish_download = 1
             self.req = 0
-        t_diff = (now-self.start-self.t_last)*self.time_scale                                         #Time decrease as media plays
+        t_diff = (now-self.start-self.t_last)                                        #Time decrease as media plays
         t,buf = now-self.start,(float(point)+self.prev_buf-t_diff)               #Time and buffer health new data points
 
         if buf > 0:                        #Heathy buffer
@@ -131,7 +141,7 @@ class Client():
             try:
                 self.socket.connect((self.host_IP, self.host_port))
                 self.connected = True
-                time.sleep(1/self.time_scale)
+                time.sleep(1)
             except socket.error as e:
                 print(str(e))
                 break
@@ -232,5 +242,5 @@ class Client():
                 self.disconnect_client()
                 break
 
-# c = Client( method = 'rl', bandwidth = 80)
-# c.start_request()
+c = Client( method = 'rl', bandwidth = 50)
+c.start_request()
