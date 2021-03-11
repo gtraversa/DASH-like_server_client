@@ -46,13 +46,13 @@ class Client():
         self.connected = connected
         self.quali_req = quali_req
         self.stream_data = [[0,0,0,bandwidth,quali_req]]
-        self.reprs = ['_240p','_480p','_720p','_1080p']
+        self.reprs = ['_240p','_360p','_480p','_720p','_1080p']
         self.current_repr = quali_req
         self.method = method
         self.episodes = episodes
         self.chunk_length = chunk_length
         self.log_name = self.create_log()
-        self.model = DQN.load('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models/uniform_training_quali_param_1/best_model')
+        self.model = DQN.load('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models/uniform_training_added_reprs1/best_model')
     
     def toString(self):
         """Print Attributes"""
@@ -242,5 +242,5 @@ class Client():
                 self.disconnect_client()
                 break
 
-c = Client( method = 'rl', bandwidth = 50)
+c = Client( quali_req = '_360p', bandwidth = 100)
 c.start_request()

@@ -32,20 +32,18 @@ class Client(gym.Env):
                         quali_req = '_240p',
                         method = None,
                         chunk_length = 3,
-                         time_scale = 1,
                         sigma = 10,
                         training = False,
                         min_train = 1, 
                         max_train = 100,
                         quali_param = 1):
-        self.time_scale = time_scale
         self.host_IP = host_IP
         self.host_port = host_port
         Client.connect(self)
         self.sigma = sigma
         self.start_bandwidth = bandwidth
         self.bandwidth = abs(sigma*np.random.randn()+ self.start_bandwidth )
-        self.timer = timer/self.time_scale
+        self.timer = timer
         self.req = req
         self.max_buf = max_buf
         self.prev_buf = 0
@@ -56,7 +54,7 @@ class Client(gym.Env):
         self.connected = connected
         self.quali_req = quali_req
         self.stream_data = [[0,0,0,quali_req,self.start_bandwidth]]
-        self.reprs = ['_240p','_480p','_720p','_1080p']
+        self.reprs = ['_240p','_360p','_480p','_720p','_1080p']
         self.current_repr = quali_req
         self.method = method
         self.chunk_length = chunk_length
@@ -117,7 +115,7 @@ class Client(gym.Env):
             try:
                 self.socket.connect((self.host_IP, self.host_port))
                 self.connected = True
-                time.sleep(1/self.time_scale)
+                time.sleep(1)
             except socket.error as e:
                 #print(str(e))
                 break
@@ -180,7 +178,7 @@ class Client(gym.Env):
         if self.prev_buf == 0 and self.seg_num != 0 and self.flg_finish_download != 1:
             return -500
         if not self.req:
-            return -1
+            return 1
         return min(0, self.prev_buf-self.max_buf)+((action-len(self.reprs)+1)*self.quali_param)
 
     def is_done(self):
