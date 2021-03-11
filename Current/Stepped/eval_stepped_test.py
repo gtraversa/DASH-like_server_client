@@ -10,10 +10,10 @@ runs = 1000
 
 def setup_method_eval():
     start_time = time.time()
-    bands = [x for x in range(1,300)]
-    methods = ['rl','MAX','heuristic']
+    bands = [x for x in range(1,400,2)]
+    methods = ['rl','heuristic']
     results = []
-    model = DQN.load('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models/uniform_training_scaled_reprs/best_model')
+    model = DQN.load('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models/uniform_training_new_reward_slow1/best_model')
     for i,method in enumerate(methods):
         rewards,actions=evaluate(bands,method,method_n = i, tot_methods = len(methods),start_time=start_time,model = model)
         results.append((rewards,actions))
@@ -22,7 +22,7 @@ def setup_method_eval():
 def setup_parameter_eval(models):
     start_time = time.time()
     
-    bands = [x for x in range(1,200)]
+    bands = [x for x in range(1,400,2)]
     results = []
     for i,model in enumerate(models):
         loaded_model =  DQN.load("/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models/{}/best_model".format(model))
@@ -115,10 +115,10 @@ def predict_action(method,obs,env,model):
 
 
 def get_models(dir_name):
-    return [f for f in listdir(dir_name) if f.startswith('uniform_training_quali_param_')]
+    return [f for f in listdir(dir_name) if f.startswith('uniform_training')]
 
 
-#models = get_models('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models')
-#models = ['uniform_training','uniform_training_quali_param_1','uniform_training_quali_param_1_old']
-#setup_parameter_eval(models)
-setup_method_eval()
+models = get_models('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models')
+#models = ['uniform_training_200_chunks_fast1','uniform_training_added_reprs1','uniform_training_200_chunks_ltd_range1','uniform_training_200_chunks_slow_train1']
+setup_parameter_eval(models)
+#setup_method_eval()

@@ -64,24 +64,26 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         return True
 
 # Create log dir
-#quali_params = [0,0.3,0.5,0.7,1,1.3,1.5]
-#for param in quali_params:
-log_dir = "models/uniform_training_quali_param_{}".format(1)
-os.makedirs(log_dir, exist_ok=True)
+quali_params = [0,0.3,0.5,0.7,1,1.3,1.5]
+#rates = [1e-5,1e-4,5e-4,1e-3,5e-3,1e-2]
+for param in quali_params:
+  log_dir = "models/uniform_training_new_reward_positive_{}".format(param)
+  os.makedirs(log_dir, exist_ok=True)
 
-# Create and wrap the environment
-env = client.Client(training = True, min_train = 1, max_train = 300, quali_param = 1)
-env = Monitor(env, log_dir)
-model = DQN('MlpPolicy', env, verbose=0,learning_rate = 1e-4)
-# Create the callback: check every 1000 steps
-# Train the agent
-time_steps = 3e5
-callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir,verbose = 1, total_time_steps=int(time_steps))
+  # Create and wrap the environment
+  env = client.Client(training = True, min_train = 1, max_train = 400, quali_param = param)
+  env = Monitor(env, log_dir)
+  model = DQN('MlpPolicy', env, verbose=0,learning_rate = 1e-4)
+  #model = DQN.load('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models/uniform_training_200_chunks_ltd_range1/best_model',env = env)
+  # Create the callback: check every 1000 steps
+  # Train the agent
+  time_steps = 5e5
+  callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir,verbose = 2, total_time_steps=int(time_steps))
 
-model.learn(total_timesteps=int(time_steps), callback=callback)
-#model.save("bandwidth = uniform(30,200)_learning_rate = 2.5e-3_time_steps = 2e5")
-plot_results([log_dir], time_steps, results_plotter.X_TIMESTEPS, "Q-parameter exploration",label = str(1))
-plt.legend()
-plt.savefig('learning_curve_q_parameters.png')
-env.disconnect_client()
+  model.learn(total_timesteps=int(time_steps), callback=callback)
+  #model.save("bandwidth = uniform(30,200)_learning_rate = 2.5e-3_time_steps = 2e5")
+  plot_results([log_dir], time_steps, results_plotter.X_TIMESTEPS, "Learning rate study",label = str(param))
+  plt.legend()
+  plt.savefig('learning_curve.png')
+  env.disconnect_client()
 plt.show()
