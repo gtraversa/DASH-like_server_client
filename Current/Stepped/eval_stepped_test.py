@@ -11,9 +11,9 @@ runs = 1000
 def setup_method_eval():
     start_time = time.time()
     bands = [x for x in range(1,400,2)]
-    methods = ['rl','heuristic']
+    methods = ['rl','heuristic','MAX']
     results = []
-    model = DQN.load('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models/uniform_training_new_reward_slow1/best_model')
+    model = DQN.load('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models/uniform_training_gamma_expl_0.25/best_model')
     for i,method in enumerate(methods):
         rewards,actions=evaluate(bands,method,method_n = i, tot_methods = len(methods),start_time=start_time,model = model)
         results.append((rewards,actions))
