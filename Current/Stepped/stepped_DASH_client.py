@@ -66,8 +66,7 @@ class Client(gym.Env):
         self.min_train = min_train
         self.max_train = max_train
         self.quali_param = quali_param
-        
-    
+         
     def toString(self):
         """Print Attributes"""
         print('Host IP: '+ self.host_IP)
@@ -115,7 +114,6 @@ class Client(gym.Env):
             try:
                 self.socket.connect((self.host_IP, self.host_port))
                 self.connected = True
-                time.sleep(1)
             except socket.error as e:
                 #print(str(e))
                 break
@@ -170,8 +168,7 @@ class Client(gym.Env):
         else:
             self.bandwidth = np.random.uniform(low = self.min_train, high = self.max_train)
         self.current_time=0
-        return np.array([0,0,self.max_buf, self.bandwidth, 0])
-        
+        return np.array([0,0,self.max_buf, self.bandwidth, 0]) 
 
     def calc_reward(self,action):
         """Calculate the reward for the last time step"""
@@ -211,7 +208,10 @@ class Client(gym.Env):
         self.calc_bandwidth(float(new_chunk[2]))
         reward = self.calc_reward(action)
         done = self.is_done()
-        info = {}
+        info = {    'bandwidth': self.bandwidth,
+                    'buffer':self.prev_buf,
+                    'is_req': self.req
+                }
         new_state = np.array([self.prev_buf,float(new_chunk[1]),self.max_buf, self.bandwidth, self.reprs.index(self.quali_req)])
         return new_state,reward,done,info
 
