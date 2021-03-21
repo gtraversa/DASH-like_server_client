@@ -15,52 +15,72 @@ email gianlu.traversa@gmail.com
 
 import socket,time,sys,getopt
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 import numpy as np
 import gym
 from gym import spaces
 
 class Client(gym.Env):
-    def __init__(self,  bandwidth=100,
-                        timer=0.3,
-                        req=1,
-                        max_buf=10,
+    """
+    'DASH' asynchronous simulated client for training using stable baselines and OpenAI gym
+
+    Paper:
+    Default parameters chosen by experimetation
+
+    :param bandwidth: Maximum bandwidth available on the client side in MB
+    :param timer: Minimum time in seconds between segment request, necessary to avoid overloading the server
+    :param req: Bool to indicate whether the client is currently requesting new data
+    :param max_buf: Target maximum buffer health in seconds, used to avoid overloading the server
+    :param host_IP: IP of host sending data (IPv4)
+    :param host_port: Port the host will be listening on
+    :param frame_size: Max frame size the client will accept
+    :param quali_req: Start codec requested by client
+    :param method: Method to be used by the client for codec selection (None,'MAX', 'rl','heuristic,'naive')
+    :param chunk_length: Constant length of chunks sent by the server in seconds
+    :param sigma: Standard deviation of normally distributed bandwidth available to the client in simulations
+    :param training: If true, bandwidths will be uniformly distributed between specified bounds for more consistent training
+    :param min_train: Lower bound of uniform distribution for training
+    :param max_train: Upper bound of uniform distribution for training
+    :param quali_param: Coefficient of codec reward in the reward function, the higher the more importance the agent will give to selecting higher codecs (typically between 0.7-1.5 experimentally)
+    """
+    def __init__(self,  bandwidth:  float = 100,
+                        timer:      float = 0.3,
+                        req:        bool = 1,
+                        max_buf:    float = 10,
                         host_IP = '127.0.0.1',
-                        host_port = 1234, 
-                        frame_size = 1024, 
-                        connected = False, 
-                        quali_req = '_240p',
-                        method = None,
-                        chunk_length = 3,
-                        sigma = 10,
-                        training = False,
-                        min_train = 1, 
-                        max_train = 100,
-                        quali_param = 1):
+                        host_port:  int = 1234, 
+                        frame_size: int = 1024, 
+                        quali_req:  str = '_240p',
+                        method:     str = None,
+                        chunk_length:float = 3,
+                        sigma:      float = 10,
+                        training:   bool = False,
+                        min_train:  float = 1, 
+                        max_train:  float = 100,
+                        quali_param:float = 1.3):
         self.host_IP = host_IP
         self.host_port = host_port
         Client.connect(self)
         self.sigma = sigma
         self.start_bandwidth = bandwidth
-        self.bandwidth = abs(sigma*np.random.randn()+ self.start_bandwidth )
+        self.bandwidth = abs(sigma*np.random.randn()+ self.start_bandwidth )            #abs needed in extreme cases to avoid negative bandwidth
         self.timer = timer
         self.req = req
         self.max_buf = max_buf
-        self.prev_buf = 0
-        self.t_last = 0
+        self.prev_buf = 0                                                               #Buffer health of the client in seconds
+        self.t_last = 0                                                                 #Time last segment was received
         self.frame_size = frame_size
-        self.seg_num = 0
+        self.seg_num = 0                                                                #Number of last segment received (used for requesting correct segment in the sequence)
         self.flg_finish_download = 0
-        self.connected = connected
+        self.connected = False
         self.quali_req = quali_req
-        self.stream_data = [[0,0,0,quali_req,self.start_bandwidth]]
-        self.reprs = ['_240p','_360p','_480p','_720p','_1080p']
-        self.current_repr = quali_req
+        self.stream_data = [[0,0,0,quali_req,self.start_bandwidth, self.bandwidth]]                     #Data for logging,codec seleciton calculations and training
+        self.reprs = ['_240p','_360p','_480p','_720p','_1080p']                         #Available codecs
+        self.current_repr = quali_req                                                   #Last requested codec
         self.method = method
         self.chunk_length = chunk_length
-        #self.log_name = self.create_log()
+        self.log_name = self.create_log()
         self.current_time = 0
-        self.action_space = spaces.Discrete(len(self.reprs))
+        self.action_space = spaces.Discrete(len(self.reprs))                            #Action space for DQN 
         self.observation_space = spaces.Box(np.array([0,0,0,0,0]),np.array([self.max_buf+self.chunk_length,1024,20,1024,len(self.reprs)])) #buffer,chunk,max_buf,max_band,prev_quality
         self.training = training
         self.min_train = min_train
@@ -79,7 +99,7 @@ class Client(gym.Env):
     
     def create_log(self):
         """Creates .txt file for logging buffer health with parameters in the name"""
-        log_name = str(self.bandwidth)+'_'+str(self.timer)+'_'+str(self.max_buf)+'_'+str(self.method)+'_'+str(self.chunk_length)+'_'+str(self.episode_num)+'_buffer.txt'
+        log_name = str(self.bandwidth)+'_'+str(self.timer)+'_'+str(self.max_buf)+'_'+str(self.method)+'_'+str(self.chunk_length)+'_buffer.txt'
         self.buffer_data = open(log_name,'w+')                                   
         self.buffer_data.truncate(0)
         return log_name
@@ -90,17 +110,16 @@ class Client(gym.Env):
         point = new_chunk[0]
         chunk_size=new_chunk[1]
         _timeToSend = float(new_chunk[2])
-        if float(chunk_size) == -1.:                                           #End contition included in the media files
-            #print('Media finished.')
+        if float(chunk_size) == -1.:                                                        #End contition included in the media files
             self.flg_finish_download = 1
             self.req = 0
-        t,buf = self.current_time,(float(point)+self.prev_buf-_timeToSend)               #Time and buffer health new data points
+        t,buf = self.current_time,(float(point)+self.prev_buf-_timeToSend)                  #Time and buffer health new data points
         if buf > 0:                        #Heathy buffer
             self.stream_data.append([t,buf,float(chunk_size),self.quali_req])
-        else:                                                                                             #Buffer event for negative buffer health
+        else:                                                                               #Buffer event for negative buffer health
             buf = 0
             self.stream_data.append([t,buf,float(chunk_size),self.quali_req])
-        if buf > self.max_buf:                                                  #Stop requesing media when buffer is saturated
+        if buf > self.max_buf:                                                              #Stop requesing media when buffer is saturated
             self.req = 0
         elif float(chunk_size) != -1:
             self.req=1
@@ -108,14 +127,12 @@ class Client(gym.Env):
 
     def connect(self):
         """Connect to media server"""
-        #print('Waiting for connection')
         self.socket = socket.socket()
         while True:
             try:
                 self.socket.connect((self.host_IP, self.host_port))
                 self.connected = True
             except socket.error as e:
-                #print(str(e))
                 break
 
     def debug_prints(self):
@@ -146,7 +163,6 @@ class Client(gym.Env):
             self.socket.send(str.encode(message))
         except socket.error as e:
             print(e)
-            print('send')
         self.track_media()
     
     def save_file(self):
@@ -198,7 +214,6 @@ class Client(gym.Env):
         except socket.error as e:
             print(e)
         new_chunk= str(self.response.decode('utf-8')).split(',')
-        #self.debug_prints()
         self.time_step(float(new_chunk[2]))
         if self.flg_finish_download == 1:                                                          
             pass
@@ -213,6 +228,7 @@ class Client(gym.Env):
                     'is_req': self.req
                 }
         new_state = np.array([self.prev_buf,float(new_chunk[1]),self.max_buf, self.bandwidth, self.reprs.index(self.quali_req)])
+        self.stream_data[-1].append(self.bandwidth)
         return new_state,reward,done,info
 
     def disconnect_client(self):
