@@ -1,7 +1,7 @@
 """
 Basic local client simulating DASH for algorithm development.
 Designed together with a server program, includes some parameter adjustment
-using command line arguments for fast testing using multiple dicerse clients.
+using command line arguments for fast testing using multiple diverse clients.
 Data logging is specific to the parameters of the client.
 
 (C)2020 Gianluca Traversa, London, United Kingdom.

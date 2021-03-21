@@ -7,42 +7,44 @@ import matplotlib.pyplot as plt
 # for i,size in enumerate(sizes_pixels):
 #     if i != 0: print(size/sizes_pixels[i-1])
 
-scale_factor = 2.25
-num_reprs = 5
-num_chunks = 12
-min_mean_size = 25
+SCALE_FACTOR = 2.25     #Ratio between codec size
+NUM_REPRS = 5           #Number of codecs
+NUM_CHUNKS = 12         #Number of chunks per media file
+MIN_MEAN_SIZE = 25      #Smallest mean chunk size for lowest codec
 
 chunk_arrays = []
-def normal_dist_chunks(scale_factor,num_chunks,num_reprs,min_mean_size):
-    for i in range(num_reprs):
-        st_dev = 0.1*min_mean_size
+def normal_dist_chunks(scale_factor,NUM_CHUNKS,NUM_REPRS,MIN_MEAN_SIZE):
+    """Generates arrays of normally distributed chunks"""
+    for i in range(NUM_REPRS):
+        st_dev = 0.1*MIN_MEAN_SIZE          #Arbitrary standard deviation proportional to mean size
         new_repr = ''
-        for j in range(num_chunks):
-            new_repr+='{:.2f}'.format(np.random.normal(min_mean_size,st_dev))
+        for j in range(NUM_CHUNKS):
+            new_repr+='{:.2f}'.format(np.random.normal(MIN_MEAN_SIZE,st_dev))
             new_repr+=','
-        new_repr+=str(-1)
+        new_repr+=str(-1)                   #Add stop condition for client
         chunk_arrays.append(new_repr)
-        min_mean_size*=scale_factor
+        MIN_MEAN_SIZE*=scale_factor         #Increase mean for next codec
     print(chunk_arrays)
 
-def perlin_generated_chunks(scale_factor,num_chunks,num_reprs,min_mean_size):
-    for i in range(num_reprs):
-        print(min_mean_size)
-        dev = 0.3*min_mean_size
+def perlin_generated_chunks(scale_factor,NUM_CHUNKS,NUM_REPRS,MIN_MEAN_SIZE):
+    """Generates arrays of chunks according to 1D perlin noise function adding time correlation"""
+    for i in range(NUM_REPRS):
+        print(MIN_MEAN_SIZE)
+        dev = 0.3*MIN_MEAN_SIZE             #Arbitrary deviation to scale noise [0,1) proportional to mean size
         new_repr = ''
         noises = []
-        for j in range(num_chunks):
-            noise = perl(x = (j-(num_chunks/2))*0.05,octaves = 2)
+        for j in range(NUM_CHUNKS):
+            noise = perl(x = (j-(NUM_CHUNKS/2))*0.05,octaves = 2)
             noises.append(noise)
-            new_size = noise*dev + min_mean_size
+            new_size = noise*dev + MIN_MEAN_SIZE
             new_repr+='{:.2f}'.format(new_size)
             new_repr+=','
-        new_repr+='-1'
+        new_repr+='-1'                      #Add stop condition for client
         chunk_arrays.append(new_repr)
-        min_mean_size*=scale_factor
+        MIN_MEAN_SIZE*=scale_factor         #Increase mean for next codec
     print(chunk_arrays)
-    return noises
+    return noises                           #Return to plot and tine perlin noise parameters
 
-noises = perlin_generated_chunks(scale_factor = 2.25,num_reprs = 5,num_chunks = 200,min_mean_size = 25)
+noises = perlin_generated_chunks(scale_factor = 2.25,NUM_REPRS = 5,NUM_CHUNKS = 200,MIN_MEAN_SIZE = 25)
 plt.plot(noises)
 plt.show()

@@ -63,19 +63,18 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
         return True
 
-# Create log dir
 quali_params = [0,0.3,0.5,0.7,1.3,1.5]
-exps = [0.05,0.1,0.15]
-#rates = [1e-5,1e-4,5e-4,1e-3,5e-3,1e-2]
+exps = [0.05,0.15,0.2,0.25]
+rates = [1e-5,1e-4,5e-4,1e-3,5e-3,1e-2]
 #for param in quali_params:
 for expl in exps:
-  log_dir = "models/uniform_training_gamma_expl_frac_{}".format(expl)
+  log_dir = "models/uniform_training_random_reset_long{}".format(expl)
   os.makedirs(log_dir, exist_ok=True)
 
   # Create and wrap the environment
   env = client.Client(training = True, min_train = 1, max_train = 400, quali_param = 1.3)
   env = Monitor(env, log_dir)
-  model = DQN('MlpPolicy', env, verbose=0,learning_rate = 1e-4, gamma = 1, exploration_final_eps=0.25, exploration_fraction=expl)
+  model = DQN('MlpPolicy', env, verbose=0,learning_rate = 1e-4, gamma = 1, exploration_final_eps=expl)
   #model = DQN.load('/Users/gianlucatraversa/Desktop/UNI Y3/Dissertation/Server-client/models/uniform_training_200_chunks_ltd_range1/best_model',env = env)
   # Create the callback: check every 1000 steps
   # Train the agent

@@ -4,6 +4,7 @@ from os import listdir
 
 
 def list_of_files(dir_name):
+    """Gets all .txt logs in the specified directory"""
     return (f for f in listdir(dir_name) if f.endswith('.' + "txt"))
 
 def plot(f_name,i):
@@ -25,7 +26,7 @@ def plot(f_name,i):
 
     for line in lines:
         data_arr = line.split(',')
-        if len(data_arr) > 4:
+        if len(data_arr) > 4:           #Condition to avoid missing datapoints and end condition
             t = data_arr[0]
             buf = data_arr[1]
             chunk = data_arr[2]
