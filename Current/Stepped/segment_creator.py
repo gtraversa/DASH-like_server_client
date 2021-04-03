@@ -30,7 +30,7 @@ def perlin_generated_chunks(scale_factor,NUM_CHUNKS,NUM_REPRS,MIN_MEAN_SIZE):
     """Generates arrays of chunks according to 1D perlin noise function adding time correlation"""
     for i in range(NUM_REPRS):
         print(MIN_MEAN_SIZE)
-        dev = 0.3*MIN_MEAN_SIZE             #Arbitrary deviation to scale noise [0,1) proportional to mean size
+        dev = 0.3*MIN_MEAN_SIZE             #Arbitrary deviation to scale noise (-1,1) proportional to mean size
         new_repr = ''
         noises = []
         for j in range(NUM_CHUNKS):

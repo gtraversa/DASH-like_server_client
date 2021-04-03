@@ -24,6 +24,7 @@ class Client(gym.Env):
     'DASH' asynchronous simulated client for training using stable baselines and OpenAI gym
 
     Paper:
+    
     Default parameters chosen by experimetation
 
     :param bandwidth: Maximum bandwidth available on the client side in MB
